@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>节假日管理</title><link rel="stylesheet" href="/static/css/style.css"></head>
+<body>
+<button class="mobile-toggle" id="mobileToggle">☰</button><div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar"><div class="sidebar-brand"><h2>值日排班管理</h2><p>后台管理系统</p></div><nav class="sidebar-nav"><a href="/admin"><span class="nav-icon">🏠</span> 首页</a><a href="/admin/semesters"><span class="nav-icon">📅</span> 学期管理</a><a href="/admin/classes"><span class="nav-icon">🏫</span> 班级管理</a><a href="/admin/schedule"><span class="nav-icon">📝</span> 排班管理</a><a href="/admin/holidays" class="active"><span class="nav-icon">🎌</span> 节假日管理</a><a href="/admin/stats"><span class="nav-icon">📊</span> 数据统计</a></nav></aside>
+<main class="main-content">
+  <div class="page-header"><h2>节假日管理</h2><a href="/admin" class="btn btn-outline btn-sm">首页</a></div>
+  <div class="card"><div class="card-header">添加假期</div><div class="card-body"><div class="form-row">
+    <div class="form-group"><label>学期</label><select id="semSel" class="form-control" onchange="loadH()"></select></div>
+    <div class="form-group"><label>日期</label><input type="date" id="hDate" class="form-control"></div>
+    <div class="form-group"><label>名称</label><input type="text" id="hName" class="form-control" placeholder="运动会"></div>
+    <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="addH()">添加</button></div>
+  </div></div></div>
+  <div class="card"><div class="card-header">系统节假日</div><div class="card-body"><p style="color:var(--text-2);font-size:0.85rem;margin-bottom:12px">一键导入国家法定节假日</p><button class="btn btn-blue" onclick="initH()">初始化系统节假日</button></div></div>
+  <div class="card"><div class="card-header">假期列表</div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>日期</th><th>名称</th><th>类型</th><th>操作</th></tr></thead><tbody id="hList"><tr><td colspan="4"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div></div>
+</main>
+<div id="toastContainer" class="toast-container"></div>
+<script src="/static/js/admin.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){api.get('/admin/semesters').then(function(d){var s=document.getElementById('semSel');if(!d||!d.length){s.innerHTML='<option>暂无学期</option>';return;}s.innerHTML=d.map(function(x){return '<option value="'+x.id+'"'+(x.is_active?' selected':'')+'>'+escapeHtml(x.name)+'</option>';}).join('');loadH();});});
+function loadH(){var sid=document.getElementById('semSel').value;if(!sid)return;api.get('/admin/holidays',{semester_id:sid}).then(function(d){var tb=document.getElementById('hList');if(!d||!d.length){tb.innerHTML='<tr><td colspan="4"><div class="empty-state">暂无假期</div></td></tr>';return;}tb.innerHTML=d.map(function(h){var t=h.is_system?'<span class="badge badge-blue">系统</span>':'<span class="badge badge-gray">自定义</span>';var del=h.is_system?'-':'<button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="delH('+h.id+')">删除</button>';return '<tr><td>'+h.date+'</td><td>'+escapeHtml(h.name)+'</td><td>'+t+'</td><td>'+del+'</td></tr>';}).join('');});}
+function addH(){var sid=document.getElementById('semSel').value,d=document.getElementById('hDate').value,n=document.getElementById('hName').value.trim();if(!sid||!d||!n){showToast('请填写完整','error');return;}api.post('/admin/holidays',{date:d,name:n,semester_id:parseInt(sid)}).then(function(){showToast('添加成功','success');document.getElementById('hDate').value='';document.getElementById('hName').value='';loadH();}).catch(function(e){showToast(e.message,'error');});}
+function initH(){var sid=document.getElementById('semSel').value;if(!sid){showToast('请先选择学期','error');return;}api.post('/admin/holidays/init-system',{semester_id:parseInt(sid)}).then(function(){showToast('已初始化','success');loadH();}).catch(function(e){showToast(e.message,'error');});}
+function delH(id){if(!confirm('确定删除？'))return;api.delete('/admin/holidays/'+id).then(function(){showToast('已删除','success');loadH();}).catch(function(e){showToast(e.message,'error');});}
+</script></body></html>

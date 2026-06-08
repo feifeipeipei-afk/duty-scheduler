@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>登录 — 值日排班管理</title><link rel="stylesheet" href="/static/css/style.css">
+<style>
+  body { background: #EDEDED; }
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login-box { background: #FFFFFF; border-radius: 12px; padding: 40px 32px; width: 100%; max-width: 360px; border: 1px solid #EDEDED; }
+  .login-title { text-align: center; margin-bottom: 32px; }
+  .login-title h1 { font-size: 1.2rem; font-weight: 500; color: #191919; }
+  .login-title p { font-size: 0.82rem; color: #999; margin-top: 4px; }
+  .login-btn { width: 100%; padding: 12px; background: #07C160; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 500; cursor: pointer; font-family: inherit; }
+  .login-btn:hover { background: #06AD56; }
+  .login-error { color: #FA5151; font-size: 0.82rem; text-align: center; margin-top: 12px; min-height: 20px; }
+</style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-title">
+        <h1>📋 值日排班管理</h1>
+        <p>请输入管理密码</p>
+      </div>
+      <form id="loginForm">
+        <div class="form-group">
+          <input type="password" id="pwd" class="form-control" placeholder="请输入密码" autofocus>
+        </div>
+        <button type="submit" class="login-btn">登录</button>
+        <div class="login-error" id="errMsg"></div>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var pwd = document.getElementById('pwd').value;
+      fetch('/admin/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password: pwd})
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.message) { window.location.href = '/admin'; }
+        else { document.getElementById('errMsg').textContent = d.error || '密码错误'; }
+      }).catch(function() { document.getElementById('errMsg').textContent = '网络错误'; });
+    });
+  </script>
+</body>
+</html>

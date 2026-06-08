@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班级管理 — 值日排班系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <button class="mobile-toggle" id="mobileToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><h2>值日排班管理</h2><p>后台管理系统</p></div>
+    <nav class="sidebar-nav">
+      <a href="/admin"><span class="nav-icon">🏠</span> 首页</a>
+      <a href="/admin/semesters"><span class="nav-icon">📅</span> 学期管理</a>
+      <a href="/admin/classes" class="active"><span class="nav-icon">🏫</span> 班级管理</a>
+      <a href="/admin/schedule"><span class="nav-icon">📝</span> 排班管理</a>
+      <a href="/admin/holidays"><span class="nav-icon">🎌</span> 节假日管理</a>
+      <a href="/admin/stats"><span class="nav-icon">📊</span> 数据统计</a>
+    </nav>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <h2>班级管理</h2>
+      <a href="/" class="btn btn-outline btn-sm">学生入口</a>
+    </div>
+    <div class="card">
+      <div class="card-header">添加班级</div>
+      <div class="card-body">
+        <form id="addClassForm" class="form-row">
+          <div class="form-group">
+            <label>班级名称</label>
+            <input type="text" id="className" class="form-control" placeholder="如：高一三班" required>
+          </div>
+          <div class="form-group">
+            <label>值日星期</label>
+            <select id="dutyDay" class="form-control" required>
+              <option value="">请选择</option>
+              <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
+              <option value="4">星期四</option><option value="5">星期五</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">添加</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">班级列表</div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:32px"></th><th>班级</th><th>值日星期</th><th>当前组</th><th>操作</th></tr></thead>
+            <tbody id="classListBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/static/js/admin.js"></script>
+  <script>
+    var WD = ['周日','周一','周二','周三','周四','周五','周六'];
+    document.addEventListener('DOMContentLoaded', function() {
+      loadClasses();
+      document.getElementById('addClassForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var n = document.getElementById('className').value.trim();
+        var d = document.getElementById('dutyDay').value;
+        if (!n || !d) { showToast('请填写完整','error'); return; }
+        api.post('/admin/classes', { name: n, duty_day: parseInt(d) }).then(function() {
+          showToast('添加成功','success');
+          document.getElementById('className').value = '';
+          document.getElementById('dutyDay').value = '';
+          loadClasses();
+        }).catch(function(err) { showToast(err.message || '添加失败','error'); });
+      });
+    });
+    function loadClasses() {
+      api.get('/admin/classes').then(render).catch(function() { showToast('加载失败','error'); });
+    }
+    function render(classes) {
+      var tb = document.getElementById('classListBody');
+      if (!classes || !classes.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🏫</div><p>暂无班级</p></div></td></tr>'; return; }
+      tb.innerHTML = classes.map(function(c) {
+        var wd = WD[c.duty_weekday] || c.duty_weekday;
+        var g = c.current_group || 'A';
+        var gl = g === 'A' ? '上半学期' : '下半学期';
+        var gc = g === 'A' ? 'badge-blue' : 'badge-green';
+        return '<tr class="expandable-row" data-id="'+c.id+'">' +
+          '<td><span class="expand-icon">▶</span></td>' +
+          '<td><strong>'+escapeHtml(c.name)+'</strong></td>' +
+          '<td>'+wd+'</td>' +
+          '<td><span class="badge '+gc+'">'+gl+'</span></td>' +
+          '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();sw('+c.id+')">切换</button> <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="event.stopPropagation();del('+c.id+')">删除</button></td></tr>' +
+          '<tr class="sub-row hidden" id="s-'+c.id+'"><td colspan="5"><div class="sub-table-wrapper"><h4>学生列表</h4><div id="st-'+c.id+'" class="loading"><div class="spinner"></div></div></div></td></tr>';
+      }).join('');
+      tb.querySelectorAll('.expandable-row').forEach(function(r) {
+        r.addEventListener('click', function() {
+          var id = this.dataset.id;
+          var sub = document.getElementById('s-'+id);
+          if (sub.classList.contains('hidden')) { sub.classList.remove('hidden'); this.classList.add('expanded'); loadStu(id); }
+          else { sub.classList.add('hidden'); this.classList.remove('expanded'); }
+        });
+      });
+    }
+    function loadStu(cid) {
+      api.get('/admin/classes/'+cid+'/students').then(function(stus) {
+        var el = document.getElementById('st-'+cid);
+        if (!stus || !stus.length) { el.innerHTML = '<p style="color:var(--text-3);padding:4px 0">暂无学生（学生在前台首次查询时自动登记）</p>'; return; }
+        el.innerHTML = '<table><thead><tr><th>姓名</th><th>值日段</th><th>操作</th></tr></thead><tbody>'+stus.map(function(s) {
+          var g = s.group_name || 'A';
+          var gl = g === 'A' ? '上半学期' : '下半学期';
+          var gc = g === 'A' ? 'badge-blue' : 'badge-green';
+          var ng = g === 'A' ? 'B' : 'A';
+          var nl = g === 'A' ? '调到下半学期' : '调到上半学期';
+          return '<tr><td>'+escapeHtml(s.name)+'</td>' +
+            '<td><span class="badge '+gc+'">'+gl+'</span></td>' +
+            '<td><button class="btn btn-sm btn-ghost" onclick="chg('+s.id+',\''+ng+'\','+cid+')">'+nl+'</button> <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="rm('+s.id+','+cid+')">移除</button></td></tr>';
+        }).join('')+'</tbody></table>';
+      }).catch(function() { document.getElementById('st-'+cid).innerHTML = '<p style="color:var(--red)">加载失败</p>'; });
+    }
+    function sw(id) { api.post('/admin/classes/'+id+'/switch-group').then(function() { showToast('已切换','success'); loadClasses(); }).catch(function(e) { showToast(e.message,'error'); }); }
+    function del(id) { if (!confirm('确定删除？')) return; api.delete('/admin/classes/'+id).then(function() { showToast('已删除','success'); loadClasses(); }).catch(function(e) { showToast(e.message,'error'); }); }
+    function rm(sid, cid) { if (!confirm('确定移除？')) return; api.delete('/admin/students/'+sid).then(function() { showToast('已移除','success'); loadStu(cid); loadClasses(); }).catch(function(e) { showToast(e.message,'error'); }); }
+    function chg(sid, g, cid) { api.put('/admin/students/'+sid+'/group', { group_name: g }).then(function(d) { showToast(d.message || '已调整','success'); loadStu(cid); }).catch(function(e) { showToast(e.message,'error'); }); }
+  </script>
+</body>
+</html>

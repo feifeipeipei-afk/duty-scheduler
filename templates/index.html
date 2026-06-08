@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>值日排班系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-icon">📋</div>
+    <h1>值日排班系统</h1>
+    <p>选择班级与组别，查看你的值日安排</p>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-header">🔍 查询值日安排</div>
+      <div class="card-body">
+        <form id="queryForm">
+          <div class="form-group">
+            <label>选择班级</label>
+            <select id="classSelect" class="form-control" required>
+              <option value="">请选择班级</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>值日时间段</label>
+            <div class="group-select">
+              <div class="group-option selected" data-group="A" onclick="selectGroup(this)">
+                <div class="g-icon">📗</div>
+                <div class="g-title">上半学期</div>
+                <div class="g-desc">学期前半段值日</div>
+              </div>
+              <div class="group-option" data-group="B" onclick="selectGroup(this)">
+                <div class="g-icon">📘</div>
+                <div class="g-title">下半学期</div>
+                <div class="g-desc">学期后半段值日</div>
+              </div>
+            </div>
+            <input type="hidden" id="selectedGroup" value="A">
+          </div>
+
+          <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="studentName" class="form-control" placeholder="请输入你的姓名" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg">查询</button>
+
+          <div class="tip-bar">
+            <span>💡</span>
+            <span>首次查询自动登记，之后直接查询即可</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="resultArea" class="hidden">
+      <div class="card">
+        <div class="card-header" id="studentInfo">📋 值日记录</div>
+        <div class="card-body">
+          <div class="tabs">
+            <div class="tab-item active" data-tab="all">全部</div>
+            <div class="tab-item" data-tab="completed">已完成</div>
+            <div class="tab-item" data-tab="pending">未完成</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>日期</th><th>星期</th><th>职责</th><th>状态</th></tr></thead>
+              <tbody id="scheduleBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyState" class="empty-state hidden">
+            <div class="empty-icon">📭</div>
+            <p>暂无值日记录</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingState" class="loading hidden">
+      <div class="spinner"></div>
+      <span>正在查询…</span>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/static/js/student.js"></script>
+  <script>
+    function selectGroup(el) {
+      document.querySelectorAll('.group-option').forEach(function(o) { o.classList.remove('selected'); });
+      el.classList.add('selected');
+      document.getElementById('selectedGroup').value = el.dataset.group;
+    }
+  </script>
+</body>
+</html>

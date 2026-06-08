@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>排班管理</title><link rel="stylesheet" href="/static/css/style.css">
+<style>
+  .swap-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; justify-content:center; align-items:center; }
+  .swap-overlay.show { display:flex; }
+  .swap-box { background:#fff; border-radius:12px; width:94%; max-width:720px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; }
+  .swap-header { padding:20px 24px; border-bottom:1px solid #EDEDED; display:flex; justify-content:space-between; align-items:center; }
+  .swap-header h3 { font-size:1rem; font-weight:500; color:#191919; }
+  .swap-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:#999; padding:4px 8px; }
+  .swap-body { display:flex; flex:1; overflow:hidden; }
+  .swap-left { flex:0 0 240px; background:#F7F7F7; padding:16px; overflow-y:auto; border-right:1px solid #EDEDED; display:flex; flex-direction:column; gap:10px; }
+  .swap-right { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+  .swap-left .swap-label { font-size:0.78rem; color:#999; margin-bottom:4px; }
+  .swap-stu { background:#fff; border:1.5px solid #EDEDED; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; }
+  .swap-stu:hover { border-color:#07C160; }
+  .swap-stu.selected { border-color:#07C160; background:#E8F8EE; }
+  .swap-stu .stu-name { font-weight:500; color:#191919; font-size:0.9rem; }
+  .swap-stu .stu-duty { font-size:0.78rem; color:#999; margin-top:2px; }
+  .swap-right .swap-label { font-size:0.78rem; color:#999; margin-bottom:4px; }
+  .swap-date-card { background:#fff; border:1px solid #EDEDED; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; }
+  .swap-date-card:hover { border-color:#07C160; }
+  .swap-date-card.selected { border-color:#07C160; background:#E8F8EE; }
+  .swap-date-card .d-date { font-weight:500; font-size:0.85rem; color:#191919; margin-bottom:6px; }
+  .swap-date-card .d-stus { display:flex; gap:6px; flex-wrap:wrap; }
+  .swap-date-card .d-chip { font-size:0.78rem; padding:3px 10px; background:#F7F7F7; border-radius:100px; color:#576B95; }
+  .swap-date-card .d-chip.active { background:#E8F8EE; color:#07C160; }
+  .swap-footer { padding:16px 24px; border-top:1px solid #EDEDED; display:flex; justify-content:space-between; align-items:center; }
+  .swap-tip { font-size:0.82rem; color:#999; }
+  .swap-actions { display:flex; gap:8px; }
+  @media(max-width:600px) { .swap-body { flex-direction:column; } .swap-left { flex:none; max-height:35vh; border-right:none; border-bottom:1px solid #EDEDED; } }
+</style>
+</head>
+<body>
+<button class="mobile-toggle" id="mobileToggle">☰</button><div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar"><div class="sidebar-brand"><h2>值日排班管理</h2><p>后台管理系统</p></div><nav class="sidebar-nav"><a href="/admin"><span class="nav-icon">🏠</span> 首页</a><a href="/admin/semesters"><span class="nav-icon">📅</span> 学期管理</a><a href="/admin/classes"><span class="nav-icon">🏫</span> 班级管理</a><a href="/admin/schedule" class="active"><span class="nav-icon">📝</span> 排班管理</a><a href="/admin/holidays"><span class="nav-icon">🎌</span> 节假日管理</a><a href="/admin/stats"><span class="nav-icon">📊</span> 数据统计</a></nav></aside>
+<main class="main-content">
+  <div class="page-header"><h2>排班管理</h2><a href="/" class="btn btn-outline btn-sm">学生入口</a></div>
+  <div class="card"><div class="card-header">生成排班</div><div class="card-body"><div class="form-row">
+    <div class="form-group"><label>班级</label><select id="sCls" class="form-control"></select></div>
+    <div class="form-group"><label>年</label><select id="sYear" class="form-control"></select></div>
+    <div class="form-group"><label>月</label><select id="sMonth" class="form-control"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
+    <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="gen()">生成</button></div>
+  </div></div></div>
+  <div class="card"><div class="card-header">排班日历</div><div class="card-body">
+    <div class="form-group"><label>筛选班级</label><select id="fCls" class="form-control" onchange="load()"></select></div>
+    <div class="cal-nav"><button onclick="chg(-1)">← 上月</button><span class="cal-month" id="cMonth"></span><button onclick="chg(1)">下月 →</button></div>
+    <div id="sList"></div>
+  </div></div>
+</main>
+
+<!-- 调班面板 -->
+<div class="swap-overlay" id="swapOverlay">
+  <div class="swap-box">
+    <div class="swap-header">
+      <h3 id="swapTitle">调班操作</h3>
+      <button class="swap-close" onclick="closeSwap()">✕</button>
+    </div>
+    <div class="swap-body">
+      <div class="swap-left">
+        <div class="swap-label">📋 当前值日学生（点击选择要替换的人）</div>
+        <div id="swapLeft"></div>
+      </div>
+      <div class="swap-right">
+        <div class="swap-label">📅 其他排班日期（点击选择替换成谁）</div>
+        <div id="swapRight"></div>
+      </div>
+    </div>
+    <div class="swap-footer">
+      <div class="swap-tip" id="swapTip">先点击左侧要替换的学生，再点击右侧选择替换人选</div>
+      <div class="swap-actions">
+        <button class="btn btn-outline btn-sm" onclick="closeSwap()">取消</button>
+        <button class="btn btn-primary btn-sm" id="swapConfirm" onclick="doSwap()" disabled>确认调换</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script src="/static/js/admin.js"></script>
+<script>
+var now=new Date(),CY=now.getFullYear(),CM=now.getMonth()+1,classes=[];
+var swapState={srcScheduleId:null,srcStudentIdx:null,srcStudentId:null,dstScheduleId:null,dstStudentIdx:null,dstStudentId:null};
+
+document.addEventListener('DOMContentLoaded',function(){
+  var ys=document.getElementById('sYear');
+  for(var y=now.getFullYear();y<=now.getFullYear()+1;y++)ys.innerHTML+='<option value="'+y+'"'+(y===CY?' selected':'')+'>'+y+'</option>';
+  document.getElementById('sMonth').value=CM;
+  loadCls();
+});
+
+function loadCls(){api.get('/admin/classes').then(function(d){classes=d||[];var h=classes.map(function(c){return '<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>';}).join('');document.getElementById('sCls').innerHTML=h;document.getElementById('fCls').innerHTML='<option value="">全部</option>'+h;if(classes.length)load();});}
+function fmt(){return CY+'-'+String(CM).padStart(2,'0');}
+function chg(d){CM+=d;if(CM>12){CM=1;CY++;}if(CM<1){CM=12;CY--;}load();}
+
+function load(){
+  document.getElementById('cMonth').textContent=CY+'年'+CM+'月';
+  var cid=document.getElementById('fCls').value||(classes[0]&&classes[0].id);
+  if(!cid)return;
+  api.get('/admin/schedule/list',{class_id:cid,month:fmt()}).then(function(d){
+    var el=document.getElementById('sList');
+    if(!d||!d.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><p>该月暂无排班</p></div>';return;}
+    el.innerHTML=d.map(function(s){
+      var sc=s.status==='completed'?'status-completed':'status-pending';
+      var st=s.status==='completed'?'已完成':'待完成';
+      var n1=s.student1_name||'待分配';var d1=s.duty1_type||'-';
+      var n2=s.student2_name||'待分配';var d2=s.duty2_type||'-';
+      return '<div class="duty-card"><div class="duty-date">'+s.date+' <span class="status-badge '+sc+'">'+st+'</span></div><div class="duty-students"><div class="duty-student">👤 '+escapeHtml(n1)+' · '+d1+'</div><div class="duty-student">👤 '+escapeHtml(n2)+' · '+d2+'</div></div><div class="duty-actions">'+(s.status==='pending'?'<button class="btn btn-sm btn-primary" onclick="done('+s.id+')">完成</button>':'')+' <button class="btn btn-sm btn-outline" onclick="openSwap('+s.id+',\''+s.date+'\',\''+escapeHtml(n1)+'\',\''+d1+'\',\''+escapeHtml(n2)+'\',\''+d2+'\','+s.student1_id+','+s.student2_id+')">调班</button></div></div>';
+    }).join('');
+  });
+}
+
+function gen(){
+  var cid=document.getElementById('sCls').value,y=document.getElementById('sYear').value,m=document.getElementById('sMonth').value;
+  if(!cid){showToast('请选择班级','error');return;}
+  api.post('/admin/schedule/generate',{class_id:parseInt(cid),year:parseInt(y),month:parseInt(m)}).then(function(d){showToast(d.message||'生成成功','success');load();}).catch(function(e){showToast(e.message,'error');});
+}
+function done(id){api.put('/admin/schedule/'+id+'/complete').then(function(){showToast('已标记完成','success');load();});}
+
+/* ===== 调班面板 ===== */
+function openSwap(sid,date,n1,d1,n2,d2,s1id,s2id){
+  swapState={srcScheduleId:sid,srcStudentIdx:null,srcStudentId:null,dstScheduleId:null,dstStudentIdx:null,dstStudentId:null};
+  document.getElementById('swapTitle').textContent='调班 — '+date;
+  document.getElementById('swapTip').textContent='先点击左侧要替换的学生，再点击右侧选择替换人选';
+  document.getElementById('swapConfirm').disabled=true;
+  // 左侧：当前日期的2名学生
+  document.getElementById('swapLeft').innerHTML=
+    '<div class="swap-stu" onclick="pickSrc(0,'+s1id+')" id="sl0"><div class="stu-name">'+n1+'</div><div class="stu-duty">'+d1+'</div></div>'+
+    '<div class="swap-stu" onclick="pickSrc(1,'+s2id+')" id="sl1"><div class="stu-name">'+n2+'</div><div class="stu-duty">'+d2+'</div></div>';
+  // 右侧：加载其他排班
+  var cid=document.getElementById('fCls').value||(classes[0]&&classes[0].id);
+  api.get('/admin/schedule/list',{class_id:cid,month:fmt()}).then(function(d){
+    var others=(d||[]).filter(function(s){return s.id!==sid;});
+    var html='';
+    others.forEach(function(s){
+      html+='<div class="swap-date-card" id="sr'+s.id+'"><div class="d-date">'+s.date+'</div><div class="d-stus">'+
+        '<span class="d-chip" onclick="event.stopPropagation();pickDst('+s.id+',0,'+s.student1_id+',this)">'+(s.student1_name||'待分配')+' '+(s.duty1_type||'')+'</span>'+
+        '<span class="d-chip" onclick="event.stopPropagation();pickDst('+s.id+',1,'+s.student2_id+',this)">'+(s.student2_name||'待分配')+' '+(s.duty2_type||'')+'</span>'+
+        '</div></div>';
+    });
+    if(!others)html='<div class="empty-state">该月没有其他排班可调换</div>';
+    document.getElementById('swapRight').innerHTML=html;
+  });
+  document.getElementById('swapOverlay').classList.add('show');
+}
+
+function pickSrc(idx,stuId){
+  swapState.srcStudentIdx=idx;swapState.srcStudentId=stuId;
+  document.querySelectorAll('#swapLeft .swap-stu').forEach(function(e,i){e.classList.toggle('selected',i===idx);});
+  checkSwapReady();
+}
+function pickDst(sid,idx,stuId,el){
+  swapState.dstScheduleId=sid;swapState.dstStudentIdx=idx;swapState.dstStudentId=stuId;
+  document.querySelectorAll('#swapRight .d-chip').forEach(function(e){e.classList.remove('active');});
+  if(el)el.classList.add('active');
+  checkSwapReady();
+}
+function checkSwapReady(){
+  var ok=swapState.srcStudentId&&swapState.dstStudentId;
+  document.getElementById('swapConfirm').disabled=!ok;
+  if(ok){
+    document.getElementById('swapConfirm').disabled=false;
+  }
+}
+
+function doSwap(){
+  var s=swapState;
+  if(!s.srcStudentId||!s.dstStudentId)return;
+  if(s.srcStudentId===s.dstStudentId){showToast('不能调换同一个学生','error');return;}
+  api.post('/admin/schedule/swap-between',{
+    schedule1_id:s.srcScheduleId, slot1:s.srcStudentIdx,
+    schedule2_id:s.dstScheduleId, slot2:s.dstStudentIdx
+  }).then(function(){
+    showToast('调换成功','success');
+    closeSwap();
+    load();
+  }).catch(function(e){showToast(e.message||'调换失败','error');});
+}
+
+function closeSwap(){document.getElementById('swapOverlay').classList.remove('show');}
+</script></body></html>

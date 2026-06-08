@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台管理 — 值日排班系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <button class="mobile-toggle" id="mobileToggle">☰</button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><h2>值日排班管理</h2><p>后台管理系统</p></div>
+    <nav class="sidebar-nav">
+      <a href="/admin" class="active"><span class="nav-icon">🏠</span> 首页</a>
+      <a href="/admin/semesters"><span class="nav-icon">📅</span> 学期管理</a>
+      <a href="/admin/classes"><span class="nav-icon">🏫</span> 班级管理</a>
+      <a href="/admin/schedule"><span class="nav-icon">📝</span> 排班管理</a>
+      <a href="/admin/holidays"><span class="nav-icon">🎌</span> 节假日管理</a>
+      <a href="/admin/stats"><span class="nav-icon">📊</span> 数据统计</a>
+    </nav>
+  </aside>
+  <main class="main-content">
+    <div class="page-header">
+      <h2>概览</h2>
+      <a href="/" class="btn btn-outline btn-sm">学生入口</a>
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card" onclick="location.href='/admin/classes'" style="cursor:pointer">
+        <div class="stat-value" id="c1">-</div>
+        <div class="stat-label">班级数量</div>
+      </div>
+      <div class="stat-card" onclick="location.href='/admin/schedule'" style="cursor:pointer">
+        <div class="stat-value" id="c2">-</div>
+        <div class="stat-label">学生总数</div>
+      </div>
+      <div class="stat-card" onclick="location.href='/admin/schedule'" style="cursor:pointer">
+        <div class="stat-value" id="c3">-</div>
+        <div class="stat-label">本月排班</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+      <div class="card" style="cursor:pointer" onclick="location.href='/admin/classes'">
+        <div class="card-body" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2rem;margin-bottom:8px">🏫</div>
+          <div style="font-weight:600;color:var(--text-0)">班级管理</div>
+          <div style="font-size:0.8rem;color:var(--text-3);margin-top:2px">添加班级、管理学生</div>
+        </div>
+      </div>
+      <div class="card" style="cursor:pointer" onclick="location.href='/admin/schedule'">
+        <div class="card-body" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2rem;margin-bottom:8px">📝</div>
+          <div style="font-weight:600;color:var(--text-0)">排班管理</div>
+          <div style="font-size:0.8rem;color:var(--text-3);margin-top:2px">生成排班、请假处理</div>
+        </div>
+      </div>
+      <div class="card" style="cursor:pointer" onclick="location.href='/admin/stats'">
+        <div class="card-body" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2rem;margin-bottom:8px">📊</div>
+          <div style="font-weight:600;color:var(--text-0)">数据统计</div>
+          <div style="font-size:0.8rem;color:var(--text-3);margin-top:2px">值日次数、均衡度</div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div id="toastContainer" class="toast-container"></div>
+  <script src="/static/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      api.get('/admin/stats/quick').then(function(d) {
+        document.getElementById('c1').textContent = (d && d.class_count) || 0;
+        document.getElementById('c2').textContent = (d && d.student_count) || 0;
+        document.getElementById('c3').textContent = (d && d.schedule_count) || 0;
+      }).catch(function() {});
+    });
+  </script>
+</body>
+</html>
