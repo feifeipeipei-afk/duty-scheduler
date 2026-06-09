@@ -10,20 +10,20 @@
   <button class="mobile-toggle" id="mobileToggle">☰</button>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand"><h2>值日排班管理</h2><p>后台管理系统</p></div>
+    <div class="sidebar-brand"><h2>值日排班管理</h2><p>老师工作台</p></div>
     <nav class="sidebar-nav">
-      <a href="/admin"><span class="nav-icon">🏠</span> 首页</a>
-      <a href="/admin/semesters"><span class="nav-icon">📅</span> 学期管理</a>
-      <a href="/admin/classes" class="active"><span class="nav-icon">🏫</span> 班级管理</a>
-      <a href="/admin/schedule"><span class="nav-icon">📝</span> 排班管理</a>
-      <a href="/admin/holidays"><span class="nav-icon">🎌</span> 节假日管理</a>
-      <a href="/admin/stats"><span class="nav-icon">📊</span> 数据统计</a>
+      <a href="/admin"><span class="nav-icon">🏠</span> 工作台</a>
+      <a href="/admin/schedule"><span class="nav-icon">📝</span> 排班</a>
+      <a href="/admin/classes" class="active"><span class="nav-icon">🏫</span> 班级学生</a>
+      <a href="/admin/holidays"><span class="nav-icon">🎌</span> 假期设置</a>
+      <a href="/admin/stats"><span class="nav-icon">📊</span> 记录与统计</a>
+      <a href="/admin/semesters"><span class="nav-icon">⚙️</span> 学期设置</a>
     </nav>
   </aside>
   <main class="main-content">
     <div class="page-header">
-      <h2>班级管理</h2>
-      <a href="/" class="btn btn-outline btn-sm">学生入口</a>
+      <div><h2>班级学生</h2><p class="page-subtitle">管理班级、导入名单，避免重复登记。</p></div>
+      <div class="toolbar-actions"><a href="/admin/students/import-template" class="btn btn-outline btn-sm">下载模板</a><button class="btn btn-outline btn-sm" onclick="openMerge()">合并重复学生</button><button class="btn btn-primary btn-sm" onclick="openImport()">导入学生名单</button></div>
     </div>
     <div class="card">
       <div class="card-header">添加班级</div>
@@ -60,12 +60,33 @@
       </div>
     </div>
   </main>
+  <div class="modal-overlay" id="importModal">
+    <div class="modal-box">
+      <div class="modal-header">导入学生名单</div>
+      <div class="form-group"><label>班级</label><select id="importClass" class="form-control"></select></div>
+      <div class="form-group"><label>名单文件</label><input id="importFile" type="file" class="form-control" accept=".xlsx,.csv,.txt"></div>
+      <div class="teacher-note">模板只需要两列：姓名、值日段。值日段可填“上半学期”或“下半学期”。重复姓名默认跳过。</div>
+      <div id="importPreview"></div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeImport()">取消</button><button class="btn btn-outline" onclick="previewImport()">预览</button><button class="btn btn-primary" id="confirmImportBtn" onclick="confirmImport()" disabled>确认导入</button></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="mergeModal">
+    <div class="modal-box">
+      <div class="modal-header">合并重复学生</div>
+      <div class="teacher-note">选择保留学生和要合并停用的学生。系统会把排班、请假和调班记录迁移到保留学生。</div>
+      <div class="form-group"><label>班级</label><select id="mergeClass" class="form-control" onchange="loadMergeStudents()"></select></div>
+      <div class="form-group"><label>保留学生</label><select id="keepStudent" class="form-control"></select></div>
+      <div class="form-group"><label>合并并停用</label><select id="removeStudent" class="form-control"></select></div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeMerge()">取消</button><button class="btn btn-primary" onclick="confirmMerge()">确认合并</button></div>
+    </div>
+  </div>
   <div id="toastContainer" class="toast-container"></div>
   <script src="/static/js/admin.js"></script>
   <script>
     var WD = ['周日','周一','周二','周三','周四','周五','周六'];
+    var currentClasses = [], importRows = [];
     document.addEventListener('DOMContentLoaded', function() {
-      loadClasses();
+      loadClasses().then(handleEntryAction);
       document.getElementById('addClassForm').addEventListener('submit', function(e) {
         e.preventDefault();
         var n = document.getElementById('className').value.trim();
@@ -80,9 +101,23 @@
       });
     });
     function loadClasses() {
-      api.get('/admin/classes').then(render).catch(function() { showToast('加载失败','error'); });
+      return api.get('/admin/classes').then(render).catch(function() { showToast('加载失败','error'); });
+    }
+    function handleEntryAction() {
+      var action = new URLSearchParams(location.search).get('action');
+      if (action === 'import') openImport();
+      if (action === 'merge') openMerge();
     }
     function render(classes) {
+      currentClasses = classes || [];
+      var importClass = document.getElementById('importClass');
+      if (importClass) {
+        importClass.innerHTML = currentClasses.map(function(c){ return '<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>'; }).join('');
+      }
+      var mergeClass = document.getElementById('mergeClass');
+      if (mergeClass) {
+        mergeClass.innerHTML = currentClasses.map(function(c){ return '<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>'; }).join('');
+      }
       var tb = document.getElementById('classListBody');
       if (!classes || !classes.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🏫</div><p>暂无班级</p></div></td></tr>'; return; }
       tb.innerHTML = classes.map(function(c) {
@@ -110,8 +145,13 @@
     function loadStu(cid) {
       api.get('/admin/classes/'+cid+'/students').then(function(stus) {
         var el = document.getElementById('st-'+cid);
-        if (!stus || !stus.length) { el.innerHTML = '<p style="color:var(--text-3);padding:4px 0">暂无学生（学生在前台首次查询时自动登记）</p>'; return; }
-        el.innerHTML = '<table><thead><tr><th>姓名</th><th>值日段</th><th>操作</th></tr></thead><tbody>'+stus.map(function(s) {
+        var addForm = '<form class="inline-add-student" onsubmit="addStudent(event,'+cid+')">' +
+          '<input class="form-control" id="newStudentName-'+cid+'" placeholder="补录学生姓名">' +
+          '<select class="form-control" id="newStudentGroup-'+cid+'"><option value="A">上半学期</option><option value="B">下半学期</option></select>' +
+          '<button class="btn btn-primary btn-sm" type="submit">添加学生</button>' +
+        '</form>';
+        if (!stus || !stus.length) { el.innerHTML = addForm + '<p style="color:var(--text-3);padding:4px 0">暂无学生，请导入名单或在这里补录。</p>'; return; }
+        el.innerHTML = addForm + '<table><thead><tr><th>姓名</th><th>值日段</th><th>操作</th></tr></thead><tbody>'+stus.map(function(s) {
           var g = s.group_name || 'A';
           var gl = g === 'A' ? '上半学期' : '下半学期';
           var gc = g === 'A' ? 'badge-blue' : 'badge-green';
@@ -123,10 +163,79 @@
         }).join('')+'</tbody></table>';
       }).catch(function() { document.getElementById('st-'+cid).innerHTML = '<p style="color:var(--red)">加载失败</p>'; });
     }
+    function addStudent(e, cid) {
+      e.preventDefault();
+      var name = document.getElementById('newStudentName-'+cid).value.trim();
+      var group = document.getElementById('newStudentGroup-'+cid).value;
+      if (!name) { showToast('请输入学生姓名','error'); return; }
+      api.post('/admin/students', {class_id:cid, name:name, group_name:group}).then(function(d) {
+        showToast(d.message || '学生添加成功','success');
+        loadStu(cid);
+        loadClasses();
+      }).catch(function(err) { showToast(err.message || '添加失败','error'); });
+    }
     function sw(id) { api.post('/admin/classes/'+id+'/switch-group').then(function() { showToast('已切换','success'); loadClasses(); }).catch(function(e) { showToast(e.message,'error'); }); }
     function del(id) { if (!confirm('确定删除？')) return; api.delete('/admin/classes/'+id).then(function() { showToast('已删除','success'); loadClasses(); }).catch(function(e) { showToast(e.message,'error'); }); }
     function rm(sid, cid) { if (!confirm('确定移除？')) return; api.delete('/admin/students/'+sid).then(function() { showToast('已移除','success'); loadStu(cid); loadClasses(); }).catch(function(e) { showToast(e.message,'error'); }); }
     function chg(sid, g, cid) { api.put('/admin/students/'+sid+'/group', { group_name: g }).then(function(d) { showToast(d.message || '已调整','success'); loadStu(cid); }).catch(function(e) { showToast(e.message,'error'); }); }
+    function openImport() {
+      document.getElementById('importPreview').innerHTML = '';
+      document.getElementById('confirmImportBtn').disabled = true;
+      document.getElementById('importModal').classList.add('show');
+    }
+    function closeImport() { document.getElementById('importModal').classList.remove('show'); }
+    function previewImport() {
+      var file = document.getElementById('importFile').files[0];
+      var classId = document.getElementById('importClass').value;
+      if (!file || !classId) { showToast('请选择班级和文件','error'); return; }
+      var form = new FormData();
+      form.append('class_id', classId);
+      form.append('file', file);
+      fetch('/admin/students/import-preview', { method:'POST', body:form, credentials:'same-origin' }).then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error || '预览失败'); return d; }); }).then(function(d) {
+        importRows = d.rows || [];
+        var s = d.summary || {};
+        document.getElementById('importPreview').innerHTML = '<div class="teacher-note">将新增 '+(s.new||0)+' 人，重复 '+(s.duplicate||0)+' 人，错误 '+(s.error||0)+' 行。</div>' +
+          '<div class="table-wrap preview-table"><table><thead><tr><th>行号</th><th>姓名</th><th>值日段</th><th>结果</th></tr></thead><tbody>' +
+          importRows.slice(0, 80).map(function(r){ return '<tr><td>'+r.line+'</td><td>'+escapeHtml(r.name||'')+'</td><td>'+(r.group_name==='B'?'下半学期':'上半学期')+'</td><td>'+escapeHtml(r.message||'')+'</td></tr>'; }).join('') +
+          '</tbody></table></div>';
+        document.getElementById('confirmImportBtn').disabled = !(s.new > 0);
+      }).catch(function(e){ showToast(e.message,'error'); });
+    }
+    function confirmImport() {
+      api.post('/admin/students/import-confirm', { class_id: parseInt(document.getElementById('importClass').value), rows: importRows }).then(function(d) {
+        showToast(d.message || '导入完成','success');
+        closeImport();
+        loadClasses();
+      }).catch(function(e){ showToast(e.message,'error'); });
+    }
+    function openMerge() {
+      document.getElementById('mergeModal').classList.add('show');
+      loadMergeStudents();
+    }
+    function closeMerge() { document.getElementById('mergeModal').classList.remove('show'); }
+    function loadMergeStudents() {
+      var cid = document.getElementById('mergeClass').value;
+      if (!cid) return;
+      api.get('/admin/classes/'+cid+'/students').then(function(stus) {
+        var options = (stus || []).filter(function(s){ return s.is_active !== 0; }).map(function(s) {
+          return '<option value="'+s.id+'">'+escapeHtml(s.name)+'（'+(s.group_name==='B'?'下半学期':'上半学期')+'）</option>';
+        }).join('');
+        document.getElementById('keepStudent').innerHTML = options;
+        document.getElementById('removeStudent').innerHTML = options;
+      });
+    }
+    function confirmMerge() {
+      var keep = document.getElementById('keepStudent').value;
+      var remove = document.getElementById('removeStudent').value;
+      if (!keep || !remove) { showToast('请选择两个学生','error'); return; }
+      if (keep === remove) { showToast('不能合并同一个学生','error'); return; }
+      if (!confirm('确认合并？被合并的学生会停用，但排班记录会迁移。')) return;
+      api.post('/admin/students/merge', {keep_student_id:parseInt(keep), remove_student_id:parseInt(remove)}).then(function(d) {
+        showToast(d.message || '合并完成','success');
+        closeMerge();
+        loadClasses();
+      }).catch(function(e){ showToast(e.message,'error'); });
+    }
   </script>
 </body>
 </html>

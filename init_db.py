@@ -59,6 +59,8 @@ def init_test_data():
             status TEXT DEFAULT 'pending',
             original_student1_id INTEGER,
             original_student2_id INTEGER,
+            published_at TEXT,
+            updated_at TEXT,
             FOREIGN KEY (class_id) REFERENCES classes (id),
             FOREIGN KEY (student1_id) REFERENCES students (id),
             FOREIGN KEY (student2_id) REFERENCES students (id)
@@ -82,6 +84,23 @@ def init_test_data():
             is_system INTEGER DEFAULT 0,
             semester_id INTEGER,
             FOREIGN KEY (semester_id) REFERENCES semesters (id)
+        );
+
+        CREATE TABLE change_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_type TEXT NOT NULL,
+            class_id INTEGER,
+            schedule_id INTEGER,
+            date TEXT,
+            old_student1_id INTEGER,
+            old_student2_id INTEGER,
+            new_student1_id INTEGER,
+            new_student2_id INTEGER,
+            reason TEXT,
+            created_at TEXT NOT NULL,
+            is_reverted INTEGER DEFAULT 0,
+            FOREIGN KEY (class_id) REFERENCES classes (id),
+            FOREIGN KEY (schedule_id) REFERENCES duty_schedule (id)
         );
     ''')
 
@@ -146,7 +165,8 @@ def init_test_data():
     SYSTEM_HOLIDAYS = {
         '2026-04-04': '清明节', '2026-04-05': '清明节', '2026-04-06': '清明节',
         '2026-05-01': '劳动节', '2026-05-02': '劳动节', '2026-05-03': '劳动节',
-        '2026-05-31': '端午节', '2026-06-01': '端午节', '2026-06-02': '端午节',
+        '2026-05-04': '劳动节', '2026-05-05': '劳动节',
+        '2026-06-19': '端午节', '2026-06-20': '端午节', '2026-06-21': '端午节',
     }
     for date_str, name in SYSTEM_HOLIDAYS.items():
         cur.execute(

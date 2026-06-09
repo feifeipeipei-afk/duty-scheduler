@@ -1,6 +1,6 @@
 /**
  * 前台学生页面脚本
- * 功能：加载班级列表、查询/注册学生、渲染值日安排
+ * 功能：加载班级列表、查询已有学生、渲染值日安排
  */
 
 (function() {
@@ -75,7 +75,7 @@
     showLoading(true);
 
     try {
-      // 带 group 参数，后端自动注册
+      // group 用于区分上/下半学期名单，后端只查询老师已维护的学生。
       var url = '/api/student/schedule?class_id=' + classId +
                 '&name=' + encodeURIComponent(name) +
                 '&group=' + group;
@@ -139,14 +139,20 @@
       else if (r.student2_id === currentStudentId) { myDuty = r.duty2_type || '-'; }
 
       html += '<tr>';
-      html += '<td>' + r.date + '</td>';
-      html += '<td>' + weekday + '</td>';
-      html += '<td>' + myDuty + '</td>';
-      html += '<td><span class="status-badge ' + statusInfo.cls + '">' + statusInfo.text + '</span></td>';
+      html += '<td>' + escapeHtml(r.date) + '</td>';
+      html += '<td>' + escapeHtml(weekday) + '</td>';
+      html += '<td>' + escapeHtml(myDuty) + '</td>';
+      html += '<td><span class="status-badge ' + escapeHtml(statusInfo.cls) + '">' + escapeHtml(statusInfo.text) + '</span></td>';
       html += '</tr>';
     });
 
     tbody.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
   }
 
   function showLoading(show) {

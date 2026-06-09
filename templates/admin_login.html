@@ -21,8 +21,9 @@
         <p>请输入管理密码</p>
       </div>
       <form id="loginForm">
+        <input type="text" name="username" value="admin" autocomplete="username" hidden>
         <div class="form-group">
-          <input type="password" id="pwd" class="form-control" placeholder="请输入密码" autofocus>
+          <input type="password" id="pwd" class="form-control" placeholder="请输入密码" autocomplete="current-password" autofocus>
         </div>
         <button type="submit" class="login-btn">登录</button>
         <div class="login-error" id="errMsg"></div>

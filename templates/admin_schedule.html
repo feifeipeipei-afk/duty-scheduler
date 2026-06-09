@@ -1,181 +1,411 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>排班管理</title><link rel="stylesheet" href="/static/css/style.css">
-<style>
-  .swap-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; justify-content:center; align-items:center; }
-  .swap-overlay.show { display:flex; }
-  .swap-box { background:#fff; border-radius:12px; width:94%; max-width:720px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; }
-  .swap-header { padding:20px 24px; border-bottom:1px solid #EDEDED; display:flex; justify-content:space-between; align-items:center; }
-  .swap-header h3 { font-size:1rem; font-weight:500; color:#191919; }
-  .swap-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:#999; padding:4px 8px; }
-  .swap-body { display:flex; flex:1; overflow:hidden; }
-  .swap-left { flex:0 0 240px; background:#F7F7F7; padding:16px; overflow-y:auto; border-right:1px solid #EDEDED; display:flex; flex-direction:column; gap:10px; }
-  .swap-right { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
-  .swap-left .swap-label { font-size:0.78rem; color:#999; margin-bottom:4px; }
-  .swap-stu { background:#fff; border:1.5px solid #EDEDED; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; }
-  .swap-stu:hover { border-color:#07C160; }
-  .swap-stu.selected { border-color:#07C160; background:#E8F8EE; }
-  .swap-stu .stu-name { font-weight:500; color:#191919; font-size:0.9rem; }
-  .swap-stu .stu-duty { font-size:0.78rem; color:#999; margin-top:2px; }
-  .swap-right .swap-label { font-size:0.78rem; color:#999; margin-bottom:4px; }
-  .swap-date-card { background:#fff; border:1px solid #EDEDED; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s; }
-  .swap-date-card:hover { border-color:#07C160; }
-  .swap-date-card.selected { border-color:#07C160; background:#E8F8EE; }
-  .swap-date-card .d-date { font-weight:500; font-size:0.85rem; color:#191919; margin-bottom:6px; }
-  .swap-date-card .d-stus { display:flex; gap:6px; flex-wrap:wrap; }
-  .swap-date-card .d-chip { font-size:0.78rem; padding:3px 10px; background:#F7F7F7; border-radius:100px; color:#576B95; }
-  .swap-date-card .d-chip.active { background:#E8F8EE; color:#07C160; }
-  .swap-footer { padding:16px 24px; border-top:1px solid #EDEDED; display:flex; justify-content:space-between; align-items:center; }
-  .swap-tip { font-size:0.82rem; color:#999; }
-  .swap-actions { display:flex; gap:8px; }
-  @media(max-width:600px) { .swap-body { flex-direction:column; } .swap-left { flex:none; max-height:35vh; border-right:none; border-bottom:1px solid #EDEDED; } }
-</style>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>排班 — 值日排班系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 <button class="mobile-toggle" id="mobileToggle">☰</button><div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="sidebar"><div class="sidebar-brand"><h2>值日排班管理</h2><p>后台管理系统</p></div><nav class="sidebar-nav"><a href="/admin"><span class="nav-icon">🏠</span> 首页</a><a href="/admin/semesters"><span class="nav-icon">📅</span> 学期管理</a><a href="/admin/classes"><span class="nav-icon">🏫</span> 班级管理</a><a href="/admin/schedule" class="active"><span class="nav-icon">📝</span> 排班管理</a><a href="/admin/holidays"><span class="nav-icon">🎌</span> 节假日管理</a><a href="/admin/stats"><span class="nav-icon">📊</span> 数据统计</a></nav></aside>
-<main class="main-content">
-  <div class="page-header"><h2>排班管理</h2><a href="/" class="btn btn-outline btn-sm">学生入口</a></div>
-  <div class="card"><div class="card-header">生成排班</div><div class="card-body"><div class="form-row">
-    <div class="form-group"><label>班级</label><select id="sCls" class="form-control"></select></div>
-    <div class="form-group"><label>年</label><select id="sYear" class="form-control"></select></div>
-    <div class="form-group"><label>月</label><select id="sMonth" class="form-control"><option value="1">1月</option><option value="2">2月</option><option value="3">3月</option><option value="4">4月</option><option value="5">5月</option><option value="6">6月</option><option value="7">7月</option><option value="8">8月</option><option value="9">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
-    <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="gen()">生成</button></div>
-  </div></div></div>
-  <div class="card"><div class="card-header">排班日历</div><div class="card-body">
-    <div class="form-group"><label>筛选班级</label><select id="fCls" class="form-control" onchange="load()"></select></div>
-    <div class="cal-nav"><button onclick="chg(-1)">← 上月</button><span class="cal-month" id="cMonth"></span><button onclick="chg(1)">下月 →</button></div>
-    <div id="sList"></div>
-  </div></div>
+<aside class="sidebar" id="sidebar"><div class="sidebar-brand"><h2>值日排班管理</h2><p>老师工作台</p></div><nav class="sidebar-nav"><a href="/admin"><span class="nav-icon">🏠</span> 工作台</a><a href="/admin/schedule" class="active"><span class="nav-icon">📝</span> 排班</a><a href="/admin/classes"><span class="nav-icon">🏫</span> 班级学生</a><a href="/admin/holidays"><span class="nav-icon">🎌</span> 假期设置</a><a href="/admin/stats"><span class="nav-icon">📊</span> 记录与统计</a><a href="/admin/semesters"><span class="nav-icon">⚙️</span> 学期设置</a></nav></aside>
+<main class="main-content page-enter">
+  <div class="page-header">
+    <div><h2>排班</h2><p class="page-subtitle">选择班级和月份，预览确认后发布。</p></div>
+    <div class="toolbar-actions">
+      <button class="btn btn-outline btn-sm" id="printBtn">打印本月</button>
+      <button class="btn btn-outline btn-sm" id="exportBtn">导出 Excel</button>
+    </div>
+  </div>
+
+  <div class="teacher-toolbar">
+    <div class="form-group"><label>班级</label><select id="classSelect" class="form-control"></select></div>
+    <div class="form-group"><label>年份</label><select id="yearSelect" class="form-control"></select></div>
+    <div class="form-group"><label>月份</label><select id="monthSelect" class="form-control"></select></div>
+    <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" id="previewBtn">生成预览</button></div>
+  </div>
+
+  <div id="health" class="card">
+    <div class="card-header">问题检查</div>
+    <div class="card-body" id="healthPanel"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span id="monthTitle">本月排班</span>
+      <div class="card-actions">
+        <button class="btn btn-outline btn-sm" id="bulkModeBtn">批量操作</button>
+        <button class="btn btn-primary btn-sm hidden" id="bulkDoneBtn">勾选完成</button>
+        <button class="btn btn-outline btn-sm hidden" id="bulkPendingBtn">改回待完成</button>
+      </div>
+    </div>
+    <div class="card-body"><div id="scheduleList"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">最近操作记录</div>
+    <div class="card-body"><div id="logList"></div></div>
+  </div>
 </main>
 
-<!-- 调班面板 -->
-<div class="swap-overlay" id="swapOverlay">
-  <div class="swap-box">
-    <div class="swap-header">
-      <h3 id="swapTitle">调班操作</h3>
-      <button class="swap-close" onclick="closeSwap()">✕</button>
+<div class="modal-overlay" id="previewModal">
+  <div class="modal-box modal-wide">
+    <div class="modal-header">确认发布排班</div>
+    <div id="previewBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cancelPreviewBtn">取消</button>
+      <button class="btn btn-primary" id="publishBtn">确认发布</button>
     </div>
-    <div class="swap-body">
-      <div class="swap-left">
-        <div class="swap-label">📋 当前值日学生（点击选择要替换的人）</div>
-        <div id="swapLeft"></div>
-      </div>
-      <div class="swap-right">
-        <div class="swap-label">📅 其他排班日期（点击选择替换成谁）</div>
-        <div id="swapRight"></div>
-      </div>
-    </div>
-    <div class="swap-footer">
-      <div class="swap-tip" id="swapTip">先点击左侧要替换的学生，再点击右侧选择替换人选</div>
-      <div class="swap-actions">
-        <button class="btn btn-outline btn-sm" onclick="closeSwap()">取消</button>
-        <button class="btn btn-primary btn-sm" id="swapConfirm" onclick="doSwap()" disabled>确认调换</button>
-      </div>
-    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="swapModal">
+  <div class="modal-box">
+    <div class="modal-header">换人</div>
+    <div id="swapBody"></div>
+    <div class="form-group"><label>原因</label><input id="swapReason" class="form-control" placeholder="可不填，如：请假、临时调整"></div>
+    <div class="modal-actions"><button class="btn btn-outline" id="cancelSwapBtn">取消</button><button class="btn btn-primary" id="confirmSwapBtn">确认换人</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="leaveModal">
+  <div class="modal-box">
+    <div class="modal-header">请假换人</div>
+    <div id="leaveBody"></div>
+    <div class="form-group"><label>原因</label><input id="leaveReason" class="form-control" placeholder="如：病假、事假、临时安排"></div>
+    <div class="teacher-note">系统会自动从同组中选择当天没有值日、次数较少的学生替补。</div>
+    <div class="modal-actions"><button class="btn btn-outline" id="cancelLeaveBtn">取消</button><button class="btn btn-primary" id="confirmLeaveBtn">确认请假</button></div>
   </div>
 </div>
 
 <div id="toastContainer" class="toast-container"></div>
 <script src="/static/js/admin.js"></script>
 <script>
-var now=new Date(),CY=now.getFullYear(),CM=now.getMonth()+1,classes=[];
-var swapState={srcScheduleId:null,srcStudentIdx:null,srcStudentId:null,dstScheduleId:null,dstStudentIdx:null,dstStudentId:null};
+var now = new Date();
+var state = {
+  classes: [],
+  schedules: [],
+  preview: null,
+  bulk: false,
+  swap: null
+};
 
-document.addEventListener('DOMContentLoaded',function(){
-  var ys=document.getElementById('sYear');
-  for(var y=now.getFullYear();y<=now.getFullYear()+1;y++)ys.innerHTML+='<option value="'+y+'"'+(y===CY?' selected':'')+'>'+y+'</option>';
-  document.getElementById('sMonth').value=CM;
-  loadCls();
+document.addEventListener('DOMContentLoaded', function() {
+  setupControls();
+  bindEvents();
+  loadClasses().then(function(){ return loadAll(); }).then(handleInitialAction);
 });
 
-function loadCls(){api.get('/admin/classes').then(function(d){classes=d||[];var h=classes.map(function(c){return '<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>';}).join('');document.getElementById('sCls').innerHTML=h;document.getElementById('fCls').innerHTML='<option value="">全部</option>'+h;if(classes.length)load();});}
-function fmt(){return CY+'-'+String(CM).padStart(2,'0');}
-function chg(d){CM+=d;if(CM>12){CM=1;CY++;}if(CM<1){CM=12;CY--;}load();}
+function setupControls() {
+  var y = document.getElementById('yearSelect');
+  for (var year = now.getFullYear() - 1; year <= now.getFullYear() + 1; year++) {
+    y.innerHTML += '<option value="'+year+'"'+(year === now.getFullYear() ? ' selected' : '')+'>'+year+'</option>';
+  }
+  var m = document.getElementById('monthSelect');
+  for (var month = 1; month <= 12; month++) {
+    m.innerHTML += '<option value="'+month+'"'+(month === now.getMonth()+1 ? ' selected' : '')+'>'+month+'月</option>';
+  }
+}
 
-function load(){
-  document.getElementById('cMonth').textContent=CY+'年'+CM+'月';
-  var cid=document.getElementById('fCls').value||(classes[0]&&classes[0].id);
-  if(!cid)return;
-  api.get('/admin/schedule/list',{class_id:cid,month:fmt()}).then(function(d){
-    var el=document.getElementById('sList');
-    if(!d||!d.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📅</div><p>该月暂无排班</p></div>';return;}
-    el.innerHTML=d.map(function(s){
-      var sc=s.status==='completed'?'status-completed':'status-pending';
-      var st=s.status==='completed'?'已完成':'待完成';
-      var n1=s.student1_name||'待分配';var d1=s.duty1_type||'-';
-      var n2=s.student2_name||'待分配';var d2=s.duty2_type||'-';
-      return '<div class="duty-card"><div class="duty-date">'+s.date+' <span class="status-badge '+sc+'">'+st+'</span></div><div class="duty-students"><div class="duty-student">👤 '+escapeHtml(n1)+' · '+d1+'</div><div class="duty-student">👤 '+escapeHtml(n2)+' · '+d2+'</div></div><div class="duty-actions">'+(s.status==='pending'?'<button class="btn btn-sm btn-primary" onclick="done('+s.id+')">完成</button>':'')+' <button class="btn btn-sm btn-outline" onclick="openSwap('+s.id+',\''+s.date+'\',\''+escapeHtml(n1)+'\',\''+d1+'\',\''+escapeHtml(n2)+'\',\''+d2+'\','+s.student1_id+','+s.student2_id+')">调班</button></div></div>';
+function bindEvents() {
+  document.getElementById('classSelect').addEventListener('change', loadAll);
+  document.getElementById('yearSelect').addEventListener('change', loadAll);
+  document.getElementById('monthSelect').addEventListener('change', loadAll);
+  document.getElementById('previewBtn').addEventListener('click', previewSchedule);
+  document.getElementById('publishBtn').addEventListener('click', publishSchedule);
+  document.getElementById('cancelPreviewBtn').addEventListener('click', function(){ closeModal('previewModal'); });
+  document.getElementById('bulkModeBtn').addEventListener('click', toggleBulk);
+  document.getElementById('bulkDoneBtn').addEventListener('click', function(){ bulkStatus('completed'); });
+  document.getElementById('bulkPendingBtn').addEventListener('click', function(){ bulkStatus('pending'); });
+  document.getElementById('printBtn').addEventListener('click', openPrint);
+  document.getElementById('exportBtn').addEventListener('click', exportExcel);
+  document.getElementById('cancelSwapBtn').addEventListener('click', function(){ closeModal('swapModal'); });
+  document.getElementById('confirmSwapBtn').addEventListener('click', doSwap);
+  document.getElementById('cancelLeaveBtn').addEventListener('click', function(){ closeModal('leaveModal'); });
+  document.getElementById('confirmLeaveBtn').addEventListener('click', doLeave);
+  document.getElementById('scheduleList').addEventListener('click', handleScheduleClick);
+}
+
+function selectedClassId(){ return document.getElementById('classSelect').value; }
+function selectedMonth(){ return document.getElementById('yearSelect').value + '-' + String(document.getElementById('monthSelect').value).padStart(2, '0'); }
+
+function loadClasses() {
+  return api.get('/admin/classes').then(function(d) {
+    state.classes = d || [];
+    var last = localStorage.getItem('teacher_last_class');
+    var select = document.getElementById('classSelect');
+    if (!state.classes.length) {
+      select.innerHTML = '<option value="">请先添加班级</option>';
+      return;
+    }
+    select.innerHTML = state.classes.map(function(c) {
+      return '<option value="'+c.id+'"'+(String(c.id) === last ? ' selected' : '')+'>'+escapeHtml(c.name)+'</option>';
     }).join('');
   });
 }
 
-function gen(){
-  var cid=document.getElementById('sCls').value,y=document.getElementById('sYear').value,m=document.getElementById('sMonth').value;
-  if(!cid){showToast('请选择班级','error');return;}
-  api.post('/admin/schedule/generate',{class_id:parseInt(cid),year:parseInt(y),month:parseInt(m)}).then(function(d){showToast(d.message||'生成成功','success');load();}).catch(function(e){showToast(e.message,'error');});
+function loadAll() {
+  if (!selectedClassId()) {
+    renderNoClassState();
+    loadHealth();
+    return Promise.resolve();
+  }
+  localStorage.setItem('teacher_last_class', selectedClassId());
+  document.getElementById('monthTitle').textContent = selectedMonth() + ' 排班';
+  setActionAvailability(true);
+  return Promise.all([loadSchedules(), loadHealth(), loadLogs()]);
 }
-function done(id){api.put('/admin/schedule/'+id+'/complete').then(function(){showToast('已标记完成','success');load();});}
 
-/* ===== 调班面板 ===== */
-function openSwap(sid,date,n1,d1,n2,d2,s1id,s2id){
-  swapState={srcScheduleId:sid,srcStudentIdx:null,srcStudentId:null,dstScheduleId:null,dstStudentIdx:null,dstStudentId:null};
-  document.getElementById('swapTitle').textContent='调班 — '+date;
-  document.getElementById('swapTip').textContent='先点击左侧要替换的学生，再点击右侧选择替换人选';
-  document.getElementById('swapConfirm').disabled=true;
-  // 左侧：当前日期的2名学生
-  document.getElementById('swapLeft').innerHTML=
-    '<div class="swap-stu" onclick="pickSrc(0,'+s1id+')" id="sl0"><div class="stu-name">'+n1+'</div><div class="stu-duty">'+d1+'</div></div>'+
-    '<div class="swap-stu" onclick="pickSrc(1,'+s2id+')" id="sl1"><div class="stu-name">'+n2+'</div><div class="stu-duty">'+d2+'</div></div>';
-  // 右侧：加载其他排班
-  var cid=document.getElementById('fCls').value||(classes[0]&&classes[0].id);
-  api.get('/admin/schedule/list',{class_id:cid,month:fmt()}).then(function(d){
-    var others=(d||[]).filter(function(s){return s.id!==sid;});
-    var html='';
-    others.forEach(function(s){
-      html+='<div class="swap-date-card" id="sr'+s.id+'"><div class="d-date">'+s.date+'</div><div class="d-stus">'+
-        '<span class="d-chip" onclick="event.stopPropagation();pickDst('+s.id+',0,'+s.student1_id+',this)">'+(s.student1_name||'待分配')+' '+(s.duty1_type||'')+'</span>'+
-        '<span class="d-chip" onclick="event.stopPropagation();pickDst('+s.id+',1,'+s.student2_id+',this)">'+(s.student2_name||'待分配')+' '+(s.duty2_type||'')+'</span>'+
-        '</div></div>';
-    });
-    if(!others)html='<div class="empty-state">该月没有其他排班可调换</div>';
-    document.getElementById('swapRight').innerHTML=html;
+function setActionAvailability(enabled) {
+  ['previewBtn','printBtn','exportBtn','bulkModeBtn','bulkDoneBtn','bulkPendingBtn'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.disabled = !enabled;
   });
-  document.getElementById('swapOverlay').classList.add('show');
 }
 
-function pickSrc(idx,stuId){
-  swapState.srcStudentIdx=idx;swapState.srcStudentId=stuId;
-  document.querySelectorAll('#swapLeft .swap-stu').forEach(function(e,i){e.classList.toggle('selected',i===idx);});
-  checkSwapReady();
+function renderNoClassState() {
+  setActionAvailability(false);
+  document.getElementById('monthTitle').textContent = '本月排班';
+  document.getElementById('scheduleList').innerHTML =
+    '<div class="empty-state"><div class="empty-icon">🏫</div><p>还没有班级，先添加班级或导入学生名单。</p><a class="btn btn-primary btn-sm" href="/admin/classes?action=import">去导入学生名单</a></div>';
+  document.getElementById('logList').innerHTML = '<div class="empty-state">暂无操作记录</div>';
 }
-function pickDst(sid,idx,stuId,el){
-  swapState.dstScheduleId=sid;swapState.dstStudentIdx=idx;swapState.dstStudentId=stuId;
-  document.querySelectorAll('#swapRight .d-chip').forEach(function(e){e.classList.remove('active');});
-  if(el)el.classList.add('active');
-  checkSwapReady();
+
+function loadSchedules() {
+  return api.get('/admin/schedule/list', {class_id:selectedClassId(), month:selectedMonth()}).then(function(d) {
+    state.schedules = d || [];
+    renderSchedules();
+  });
 }
-function checkSwapReady(){
-  var ok=swapState.srcStudentId&&swapState.dstStudentId;
-  document.getElementById('swapConfirm').disabled=!ok;
-  if(ok){
-    document.getElementById('swapConfirm').disabled=false;
+
+function renderSchedules() {
+  var el = document.getElementById('scheduleList');
+  if (!state.schedules.length) {
+    document.getElementById('bulkModeBtn').disabled = true;
+    document.getElementById('bulkDoneBtn').classList.add('hidden');
+    document.getElementById('bulkPendingBtn').classList.add('hidden');
+    state.bulk = false;
+    document.getElementById('bulkModeBtn').textContent = '批量操作';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>这个月还没有排班，点击上方“生成预览”。</p></div>';
+    return;
+  }
+  document.getElementById('bulkModeBtn').disabled = false;
+  el.innerHTML = state.schedules.map(function(s) {
+    var status = s.status === 'completed' ? '已完成' : '待完成';
+    var cls = s.status === 'completed' ? 'status-completed' : 'status-pending';
+    return '<div class="schedule-row" data-id="'+s.id+'">' +
+      '<label class="bulk-check '+(state.bulk ? '' : 'hidden')+'"><input type="checkbox" value="'+s.id+'"></label>' +
+      '<div class="schedule-main"><strong>'+escapeHtml(s.date)+'</strong><span class="status-badge '+cls+'">'+status+'</span></div>' +
+      '<div class="schedule-people"><span>'+escapeHtml(s.student1_name || '待分配')+' · '+escapeHtml(s.duty1_type || '-')+'</span><span>'+escapeHtml(s.student2_name || '待分配')+' · '+escapeHtml(s.duty2_type || '-')+'</span></div>' +
+      '<div class="row-actions">' +
+        (s.status === 'pending' ? '<button class="btn btn-sm btn-primary" data-action="done">完成</button>' : '<button class="btn btn-sm btn-outline" data-action="pending">改回待完成</button>') +
+        '<button class="btn btn-sm btn-outline" data-action="swap">换人</button>' +
+        '<button class="btn btn-sm btn-outline" data-action="leave">请假</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+function loadHealth() {
+  return api.get('/admin/health').then(function(d) {
+    var issues = (d && d.issues) || [];
+    var panel = document.getElementById('healthPanel');
+    if (!issues.length) {
+      panel.innerHTML = '<div class="teacher-note success">没有发现影响排班的问题。</div>';
+      return;
+    }
+    panel.innerHTML = '<div class="issue-list">' + issues.map(function(i) {
+      var cls = i.level === 'block' ? 'danger' : 'warn';
+      return '<div class="issue-row '+cls+'"><span>'+(i.level === 'block' ? '需处理' : '提醒')+'</span><strong>'+escapeHtml(i.message)+'</strong></div>';
+    }).join('') + '</div>';
+  });
+}
+
+function loadLogs() {
+  if (!selectedClassId()) {
+    document.getElementById('logList').innerHTML = '<div class="empty-state">暂无操作记录</div>';
+    return Promise.resolve();
+  }
+  return api.get('/admin/change-logs', {class_id:selectedClassId()}).then(function(d) {
+    var el = document.getElementById('logList');
+    var rows = d || [];
+    if (!rows.length) { el.innerHTML = '<div class="empty-state">暂无操作记录</div>'; return; }
+    el.innerHTML = '<div class="log-list">' + rows.slice(0, 8).map(function(r) {
+      var names = [r.new_student1_name, r.new_student2_name].filter(Boolean).join('、') || '-';
+      return '<div class="log-row"><span>'+escapeHtml(r.created_at || '')+'</span><strong>'+escapeHtml(actionName(r.action_type))+'</strong><em>'+escapeHtml(r.date || '')+' '+escapeHtml(names)+'</em></div>';
+    }).join('') + '</div>';
+  });
+}
+
+function actionName(t) {
+  var map = {publish_schedule:'发布排班', swap:'调班', revert_swap:'撤销调班', leave:'请假', complete:'完成', bulk_complete:'批量完成', bulk_pending:'批量改回', import_students:'导入学生'};
+  return map[t] || t || '操作';
+}
+
+function previewSchedule() {
+  if (!selectedClassId()) { showToast('请先添加并选择班级', 'error'); return; }
+  var btn = document.getElementById('previewBtn');
+  btn.disabled = true; btn.textContent = '正在检查...';
+  api.post('/admin/schedule/preview', {class_id:parseInt(selectedClassId()), year:parseInt(document.getElementById('yearSelect').value), month:parseInt(document.getElementById('monthSelect').value)})
+    .then(function(d){ state.preview = d; renderPreview(d); openModal('previewModal'); })
+    .catch(function(e){ showToast(e.message || '生成失败', 'error'); })
+    .finally(function(){ btn.disabled = false; btn.textContent = '生成预览'; });
+}
+
+function renderPreview(d) {
+  var body = document.getElementById('previewBody');
+  var blockers = (d.conflicts || []).filter(function(x){ return x.level === 'block'; });
+  var warns = d.warnings || [];
+  var issueHtml = '';
+  if (blockers.length || warns.length) {
+    issueHtml = '<div class="issue-list compact">' + blockers.concat(warns).map(function(i) {
+      return '<div class="issue-row '+(i.level === 'block' ? 'danger' : 'warn')+'"><span>'+(i.level === 'block' ? '阻止' : '提醒')+'</span><strong>'+escapeHtml(i.message)+'</strong></div>';
+    }).join('') + '</div>';
+  }
+  var rows = (d.preview || []).map(function(r) {
+    return '<tr><td>'+escapeHtml(r.date)+'</td><td>'+escapeHtml(r.weekday)+'</td><td>'+escapeHtml(r.student1_name)+' · '+escapeHtml(r.duty1_type)+'</td><td>'+escapeHtml(r.student2_name)+' · '+escapeHtml(r.duty2_type)+'</td></tr>';
+  }).join('');
+  body.innerHTML = '<div class="teacher-note">本次使用：'+escapeHtml(d.group_label)+'名单。发布后将自动切换到下一组。</div>' + issueHtml +
+    '<div class="table-wrap preview-table"><table><thead><tr><th>日期</th><th>星期</th><th>学生1</th><th>学生2</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  document.getElementById('publishBtn').disabled = !d.can_publish;
+}
+
+function publishSchedule() {
+  if (!state.preview) return;
+  api.post('/admin/schedule/publish', {preview:state.preview}).then(function(d) {
+    showToast(d.message || '已发布', 'success');
+    closeModal('previewModal');
+    loadAll();
+  }).catch(function(e){ showToast(e.message || '发布失败', 'error'); });
+}
+
+function toggleBulk() {
+  state.bulk = !state.bulk;
+  document.getElementById('bulkModeBtn').textContent = state.bulk ? '退出批量' : '批量操作';
+  document.getElementById('bulkDoneBtn').classList.toggle('hidden', !state.bulk);
+  document.getElementById('bulkPendingBtn').classList.toggle('hidden', !state.bulk);
+  renderSchedules();
+}
+
+function selectedScheduleIds() {
+  return Array.prototype.slice.call(document.querySelectorAll('#scheduleList input[type=checkbox]:checked')).map(function(i){ return parseInt(i.value); });
+}
+
+function bulkStatus(status) {
+  var ids = selectedScheduleIds();
+  if (!ids.length) { showToast('请先勾选排班', 'error'); return; }
+  api.post('/admin/schedule/bulk-status', {schedule_ids:ids, status:status}).then(function(d) {
+    showToast(d.message || '已更新', 'success');
+    loadAll();
+  }).catch(function(e){ showToast(e.message || '操作失败', 'error'); });
+}
+
+function handleScheduleClick(e) {
+  var btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  var row = e.target.closest('.schedule-row');
+  var sid = parseInt(row.dataset.id);
+  var schedule = state.schedules.find(function(s){ return s.id === sid; });
+  var action = btn.dataset.action;
+  if (action === 'done' || action === 'pending') {
+    api.post('/admin/schedule/bulk-status', {schedule_ids:[sid], status: action === 'done' ? 'completed' : 'pending'}).then(loadAll);
+  } else if (action === 'swap') {
+    openSwap(schedule);
+  } else if (action === 'leave') {
+    openLeave(schedule);
   }
 }
 
-function doSwap(){
-  var s=swapState;
-  if(!s.srcStudentId||!s.dstStudentId)return;
-  if(s.srcStudentId===s.dstStudentId){showToast('不能调换同一个学生','error');return;}
-  api.post('/admin/schedule/swap-between',{
-    schedule1_id:s.srcScheduleId, slot1:s.srcStudentIdx,
-    schedule2_id:s.dstScheduleId, slot2:s.dstStudentIdx
-  }).then(function(){
-    showToast('调换成功','success');
-    closeSwap();
-    load();
-  }).catch(function(e){showToast(e.message||'调换失败','error');});
+function openSwap(schedule) {
+  state.swap = {source:schedule, target:null, slot1:null, slot2:null};
+  var others = state.schedules.filter(function(s){ return s.id !== schedule.id; });
+  document.getElementById('swapBody').innerHTML =
+    '<div class="teacher-note">先选当前要换下的人，再选另一条排班中的替换人。</div>' +
+    '<div class="swap-grid"><div><h4>当前排班</h4>'+studentChoices(schedule, 'src')+'</div><div><h4>可替换人选</h4>'+others.map(function(s){ return '<div class="swap-date">'+escapeHtml(s.date)+studentChoices(s, 'dst')+'</div>'; }).join('')+'</div></div>';
+  openModal('swapModal');
 }
 
-function closeSwap(){document.getElementById('swapOverlay').classList.remove('show');}
-</script></body></html>
+function studentChoices(s, side) {
+  return '<button class="choice" data-side="'+side+'" data-sid="'+s.id+'" data-slot="0">'+escapeHtml(s.student1_name || '待分配')+' · '+escapeHtml(s.duty1_type || '-')+'</button>' +
+         '<button class="choice" data-side="'+side+'" data-sid="'+s.id+'" data-slot="1">'+escapeHtml(s.student2_name || '待分配')+' · '+escapeHtml(s.duty2_type || '-')+'</button>';
+}
+
+document.addEventListener('click', function(e) {
+  var choice = e.target.closest('.choice');
+  if (!choice || !state.swap) return;
+  var side = choice.dataset.side;
+  if (side === 'src') {
+    state.swap.slot1 = parseInt(choice.dataset.slot);
+  } else {
+    state.swap.target = parseInt(choice.dataset.sid);
+    state.swap.slot2 = parseInt(choice.dataset.slot);
+  }
+  choice.parentNode.querySelectorAll('.choice').forEach(function(c){ if(c.dataset.side === side) c.classList.remove('selected'); });
+  choice.classList.add('selected');
+});
+
+function doSwap() {
+  var s = state.swap;
+  if (!s || s.slot1 === null || !s.target || s.slot2 === null) { showToast('请先选好两名学生', 'error'); return; }
+  api.post('/admin/schedule/swap-between', {schedule1_id:s.source.id, slot1:s.slot1, schedule2_id:s.target, slot2:s.slot2, reason:document.getElementById('swapReason').value}).then(function() {
+    showToast('已换人', 'success');
+    closeModal('swapModal');
+    loadAll();
+  }).catch(function(e){ showToast(e.message || '换人失败', 'error'); });
+}
+
+function openLeave(schedule) {
+  state.leave = {schedule:schedule, studentId:null};
+  document.getElementById('leaveBody').innerHTML =
+    '<div class="teacher-note">'+escapeHtml(schedule.date)+' 请选择请假的学生。</div>' +
+    '<button class="choice" data-leave-student="'+schedule.student1_id+'">'+escapeHtml(schedule.student1_name || '待分配')+' · '+escapeHtml(schedule.duty1_type || '-')+'</button>' +
+    '<button class="choice" data-leave-student="'+schedule.student2_id+'">'+escapeHtml(schedule.student2_name || '待分配')+' · '+escapeHtml(schedule.duty2_type || '-')+'</button>';
+  document.getElementById('leaveReason').value = '';
+  openModal('leaveModal');
+}
+
+document.addEventListener('click', function(e) {
+  var leaveChoice = e.target.closest('[data-leave-student]');
+  if (!leaveChoice || !state.leave) return;
+  state.leave.studentId = parseInt(leaveChoice.dataset.leaveStudent);
+  document.querySelectorAll('[data-leave-student]').forEach(function(c){ c.classList.remove('selected'); });
+  leaveChoice.classList.add('selected');
+});
+
+function doLeave() {
+  if (!state.leave || !state.leave.studentId) { showToast('请先选择请假的学生', 'error'); return; }
+  api.post('/admin/leave', {
+    student_id: state.leave.studentId,
+    date: state.leave.schedule.date,
+    reason: document.getElementById('leaveReason').value
+  }).then(function(d) {
+    showToast((d.replacement && d.replacement.name ? '已安排 '+d.replacement.name+' 替补' : '请假已处理'), 'success');
+    closeModal('leaveModal');
+    loadAll();
+  }).catch(function(e){ showToast(e.message || '请假处理失败', 'error'); });
+}
+
+function openPrint() {
+  if (!selectedClassId()) { showToast('请先选择班级', 'error'); return; }
+  window.open('/admin/schedule/print?class_id=' + selectedClassId() + '&month=' + selectedMonth(), '_blank');
+}
+
+function exportExcel() {
+  if (!selectedClassId()) { showToast('请先选择班级', 'error'); return; }
+  window.location.href = '/admin/schedule/export?class_id=' + selectedClassId() + '&month=' + selectedMonth();
+}
+
+function handleInitialAction() {
+  var action = new URLSearchParams(location.search).get('action');
+  if (action === 'generate') {
+    document.getElementById('previewBtn').focus();
+    document.getElementById('previewBtn').scrollIntoView({behavior:'smooth', block:'center'});
+    previewSchedule();
+  } else if (action === 'print') {
+    openPrint();
+  }
+}
+
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+</script>
+</body></html>

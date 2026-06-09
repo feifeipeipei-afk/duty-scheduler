@@ -65,7 +65,7 @@
   function handleResponse(res) {
     return res.json().then(function(data) {
       if (!res.ok) {
-        throw new Error(data.message || '请求失败');
+        throw new Error(data.error || data.message || '请求失败');
       }
       return data.data !== undefined ? data.data : data;
     }).catch(function(err) {
