@@ -34,6 +34,9 @@
         opt.textContent = c.name;
         select.appendChild(opt);
       });
+      // 班级选项就绪后再恢复上次选择，避免定时器竞态
+      var savedClass = localStorage.getItem('duty_class_id');
+      if (savedClass) { select.value = savedClass; }
     } catch (e) {
       showToast('加载班级列表失败', 'error');
     }
@@ -50,8 +53,12 @@
   function setupTabs() {
     document.querySelectorAll('.tab-item').forEach(function(tab) {
       tab.addEventListener('click', function() {
-        document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.tab-item').forEach(function(t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
         this.classList.add('active');
+        this.setAttribute('aria-selected', 'true');
         currentTab = this.dataset.tab;
         renderRecords();
       });
@@ -175,17 +182,15 @@
   }
 
   function restoreSelection() {
-    var classId = localStorage.getItem('duty_class_id');
     var name = localStorage.getItem('duty_student_name');
     var group = localStorage.getItem('duty_group');
-    if (classId) {
-      setTimeout(function() { document.getElementById('classSelect').value = classId; }, 500);
-    }
     if (name) { document.getElementById('studentName').value = name; }
     if (group) {
       document.getElementById('selectedGroup').value = group;
       document.querySelectorAll('.group-option').forEach(function(o) {
-        o.classList.toggle('selected', o.dataset.group === group);
+        var selected = o.dataset.group === group;
+        o.classList.toggle('selected', selected);
+        o.setAttribute('aria-pressed', selected ? 'true' : 'false');
       });
     }
   }

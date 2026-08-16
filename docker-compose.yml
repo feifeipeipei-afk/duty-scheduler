@@ -1,0 +1,17 @@
+services:
+  duty-scheduler:
+    build: .
+    container_name: duty-scheduler
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      # 生产环境务必修改这两个值（也可写入同目录 .env 文件）
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      FLASK_SECRET_KEY: ${FLASK_SECRET_KEY:-please-change-me}
+      FLASK_DEBUG: "0"
+    volumes:
+      - duty-data:/data
+
+volumes:
+  duty-data:

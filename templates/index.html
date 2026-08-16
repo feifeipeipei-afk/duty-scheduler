@@ -8,49 +8,49 @@
 </head>
 <body>
   <div class="hero">
-    <div class="hero-icon">📋</div>
+    <div class="hero-icon" aria-hidden="true">📋</div>
     <h1>值日排班系统</h1>
     <p>选择班级与组别，查看你的值日安排</p>
   </div>
 
   <div class="container">
     <div class="card">
-      <div class="card-header">🔍 查询值日安排</div>
+      <div class="card-header"><span aria-hidden="true">🔍</span> 查询值日安排</div>
       <div class="card-body">
         <form id="queryForm">
           <div class="form-group">
-            <label>选择班级</label>
+            <label for="classSelect">选择班级</label>
             <select id="classSelect" class="form-control" required>
               <option value="">请选择班级</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>值日时间段</label>
-            <div class="group-select">
-              <div class="group-option selected" data-group="A" onclick="selectGroup(this)">
-                <div class="g-icon">📗</div>
-                <div class="g-title">上半学期</div>
-                <div class="g-desc">学期前半段值日</div>
-              </div>
-              <div class="group-option" data-group="B" onclick="selectGroup(this)">
-                <div class="g-icon">📘</div>
-                <div class="g-title">下半学期</div>
-                <div class="g-desc">学期后半段值日</div>
-              </div>
+            <label id="groupLabel">值日时间段</label>
+            <div class="group-select" role="group" aria-labelledby="groupLabel">
+              <button type="button" class="group-option selected" data-group="A" aria-pressed="true" onclick="selectGroup(this)">
+                <span class="g-icon" aria-hidden="true">📗</span>
+                <span class="g-title">上半学期</span>
+                <span class="g-desc">学期前半段值日</span>
+              </button>
+              <button type="button" class="group-option" data-group="B" aria-pressed="false" onclick="selectGroup(this)">
+                <span class="g-icon" aria-hidden="true">📘</span>
+                <span class="g-title">下半学期</span>
+                <span class="g-desc">学期后半段值日</span>
+              </button>
             </div>
             <input type="hidden" id="selectedGroup" value="A">
           </div>
 
           <div class="form-group">
-            <label>姓名</label>
+            <label for="studentName">姓名</label>
             <input type="text" id="studentName" class="form-control" placeholder="请输入你的姓名" required>
           </div>
 
           <button type="submit" class="btn btn-primary btn-block btn-lg">查询</button>
 
           <div class="tip-bar">
-            <span>💡</span>
+            <span aria-hidden="true">💡</span>
             <span>名单由老师统一导入；查不到时请核对姓名或联系老师</span>
           </div>
         </form>
@@ -59,12 +59,12 @@
 
     <div id="resultArea" class="hidden">
       <div class="card">
-        <div class="card-header" id="studentInfo">📋 值日记录</div>
+        <div class="card-header" id="studentInfo"><span aria-hidden="true">📋</span> 值日记录</div>
         <div class="card-body">
-          <div class="tabs">
-            <div class="tab-item active" data-tab="all">全部</div>
-            <div class="tab-item" data-tab="completed">已完成</div>
-            <div class="tab-item" data-tab="pending">未完成</div>
+          <div class="tabs" role="tablist" aria-label="记录筛选">
+            <button type="button" class="tab-item active" role="tab" aria-selected="true" data-tab="all">全部</button>
+            <button type="button" class="tab-item" role="tab" aria-selected="false" data-tab="completed">已完成</button>
+            <button type="button" class="tab-item" role="tab" aria-selected="false" data-tab="pending">未完成</button>
           </div>
           <div class="table-wrap">
             <table>
@@ -73,7 +73,7 @@
             </table>
           </div>
           <div id="emptyState" class="empty-state hidden">
-            <div class="empty-icon">📭</div>
+            <div class="empty-icon" aria-hidden="true">📭</div>
             <p>暂无值日记录</p>
           </div>
         </div>
@@ -86,12 +86,16 @@
     </div>
   </div>
 
-  <div id="toastContainer" class="toast-container"></div>
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
   <script src="/static/js/student.js"></script>
   <script>
     function selectGroup(el) {
-      document.querySelectorAll('.group-option').forEach(function(o) { o.classList.remove('selected'); });
+      document.querySelectorAll('.group-option').forEach(function(o) {
+        o.classList.remove('selected');
+        o.setAttribute('aria-pressed', 'false');
+      });
       el.classList.add('selected');
+      el.setAttribute('aria-pressed', 'true');
       document.getElementById('selectedGroup').value = el.dataset.group;
     }
   </script>

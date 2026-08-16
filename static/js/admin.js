@@ -1,6 +1,6 @@
 /**
  * 后台管理通用脚本
- * 功能：导航切换、API请求封装、通用列表渲染、消息提示
+ * 功能：导航切换、API请求封装、消息提示、无障碍模态框
  */
 
 (function(window) {
@@ -58,6 +58,27 @@
         },
         credentials: 'same-origin'
       }).then(handleResponse);
+    },
+
+    // 下载文件（Excel 导出等）：错误时能 toast 提示，而不是在页面渲染裸 JSON
+    download: function(url, filename) {
+      return fetch(url, { credentials: 'same-origin' }).then(function(res) {
+        if (!res.ok) {
+          return res.json().catch(function() { return {}; }).then(function(data) {
+            throw new Error(data.error || '下载失败');
+          });
+        }
+        return res.blob();
+      }).then(function(blob) {
+        var a = document.createElement('a');
+        var objectUrl = URL.createObjectURL(blob);
+        a.href = objectUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(objectUrl); }, 1000);
+      });
     }
   };
 
@@ -100,23 +121,6 @@
     }, 3000);
   }
 
-  // 通用列表渲染函数
-  function renderList(container, items, renderFn, emptyMsg) {
-    emptyMsg = emptyMsg || '暂无数据';
-    if (!container) return;
-
-    if (!items || items.length === 0) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>' + emptyMsg + '</p></div>';
-      return;
-    }
-
-    if (typeof renderFn === 'function') {
-      container.innerHTML = items.map(renderFn).join('');
-    } else {
-      console.error('renderList 需要一个渲染函数');
-    }
-  }
-
   // HTML转义
   function escapeHtml(str) {
     if (!str) return '';
@@ -125,14 +129,80 @@
     return div.innerHTML;
   }
 
+  // ---------- 无障碍模态框：焦点捕获、Esc 关闭、焦点归还 ----------
+  var openedModal = null;
+  var previousFocus = null;
+
+  function openModal(id) {
+    var modal = document.getElementById(id);
+    if (!modal) return;
+    closeAllModals();
+    openedModal = modal;
+    previousFocus = document.activeElement;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    // 把焦点移入对话框内第一个可聚焦元素
+    var focusables = modal.querySelectorAll('button, [href], input, select, textarea');
+    if (focusables.length) { focusables[0].focus(); }
+  }
+
+  function closeModal(id) {
+    var modal = typeof id === 'string' ? document.getElementById(id) : id;
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    if (openedModal === modal) {
+      openedModal = null;
+      if (previousFocus && previousFocus.focus) { previousFocus.focus(); }
+      previousFocus = null;
+    }
+  }
+
+  function closeAllModals() {
+    document.querySelectorAll('.modal-overlay.show').forEach(closeModal);
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (!openedModal) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal(openedModal);
+      return;
+    }
+    if (e.key === 'Tab') {
+      // 焦点捕获：Tab 循环停留在对话框内
+      var focusables = Array.prototype.slice.call(
+        openedModal.querySelectorAll('button, [href], input, select, textarea'));
+      if (!focusables.length) return;
+      var first = focusables[0];
+      var last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  });
+
+  // 点击遮罩关闭
+  document.addEventListener('click', function(e) {
+    if (openedModal && e.target === openedModal) {
+      closeModal(openedModal);
+    }
+  });
+
   // 移动端菜单控制
   function toggleMobileMenu() {
     var sidebar = document.getElementById('sidebar');
     var overlay = document.getElementById('sidebarOverlay');
+    var toggleBtn = document.getElementById('mobileToggle');
 
     if (sidebar && overlay) {
       sidebar.classList.toggle('open');
       overlay.classList.toggle('show');
+      if (toggleBtn) {
+        toggleBtn.setAttribute('aria-expanded', sidebar.classList.contains('open') ? 'true' : 'false');
+      }
     }
   }
 
@@ -159,11 +229,6 @@
 
     navLinks.forEach(function(link) {
       link.addEventListener('click', function() {
-        // 移除所有active
-        navLinks.forEach(function(l) { l.classList.remove('active'); });
-        // 添加当前active
-        this.classList.add('active');
-
         // 在移动端，点击后关闭菜单
         if (window.innerWidth <= 768) {
           toggleMobileMenu();
@@ -181,8 +246,9 @@
   // 暴露到全局
   window.api = api;
   window.showToast = showToast;
-  window.renderList = renderList;
   window.escapeHtml = escapeHtml;
+  window.openModal = openModal;
+  window.closeModal = closeModal;
   window.toggleMobileMenu = toggleMobileMenu;
 
 })(window);

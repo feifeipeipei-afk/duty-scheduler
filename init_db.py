@@ -1,107 +1,44 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-值日排班管理系统 - 数据库初始化和测试数据脚本
+值日排班管理系统 - 数据库初始化和演示数据脚本
+
+⚠️ 本脚本会删除现有数据库并重建演示数据，仅用于首次体验或开发环境。
+   正式使用的数据请勿运行；如需执行请加 --force 参数确认。
+
+用法：
+    python init_db.py --force
 """
 
-import sqlite3
 import os
+import sqlite3
+import sys
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'duty_scheduler.db')
+from duty_scheduler.calendar_rules import SYSTEM_HOLIDAYS
+from duty_scheduler.db import SCHEMA_STATEMENTS
+
+DB_PATH = os.environ.get(
+    'DUTY_SCHEDULER_DB',
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'duty_scheduler.db'),
+)
 
 
 def init_test_data():
-    """初始化测试数据"""
+    """初始化演示数据（破坏性：删除旧库后重建）。"""
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
         print('已删除旧数据库')
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA foreign_keys = ON')
     cur = conn.cursor()
 
-    # 创建表结构
-    cur.executescript('''
-        CREATE TABLE semesters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            start_date TEXT NOT NULL,
-            end_date TEXT NOT NULL,
-            is_active INTEGER DEFAULT 0
-        );
-
-        CREATE TABLE classes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            semester_id INTEGER NOT NULL,
-            duty_weekday INTEGER NOT NULL,
-            current_group TEXT DEFAULT 'A',
-            FOREIGN KEY (semester_id) REFERENCES semesters (id)
-        );
-
-        CREATE TABLE students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            class_id INTEGER NOT NULL,
-            group_name TEXT NOT NULL,
-            is_active INTEGER DEFAULT 1,
-            FOREIGN KEY (class_id) REFERENCES classes (id)
-        );
-
-        CREATE TABLE duty_schedule (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            class_id INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            student1_id INTEGER,
-            student2_id INTEGER,
-            duty1_type TEXT,
-            duty2_type TEXT,
-            status TEXT DEFAULT 'pending',
-            original_student1_id INTEGER,
-            original_student2_id INTEGER,
-            published_at TEXT,
-            updated_at TEXT,
-            FOREIGN KEY (class_id) REFERENCES classes (id),
-            FOREIGN KEY (student1_id) REFERENCES students (id),
-            FOREIGN KEY (student2_id) REFERENCES students (id)
-        );
-
-        CREATE TABLE leave_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER NOT NULL,
-            date TEXT NOT NULL,
-            reason TEXT,
-            replacement_id INTEGER,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (student_id) REFERENCES students (id),
-            FOREIGN KEY (replacement_id) REFERENCES students (id)
-        );
-
-        CREATE TABLE holidays (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL,
-            is_system INTEGER DEFAULT 0,
-            semester_id INTEGER,
-            FOREIGN KEY (semester_id) REFERENCES semesters (id)
-        );
-
-        CREATE TABLE change_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            action_type TEXT NOT NULL,
-            class_id INTEGER,
-            schedule_id INTEGER,
-            date TEXT,
-            old_student1_id INTEGER,
-            old_student2_id INTEGER,
-            new_student1_id INTEGER,
-            new_student2_id INTEGER,
-            reason TEXT,
-            created_at TEXT NOT NULL,
-            is_reverted INTEGER DEFAULT 0,
-            FOREIGN KEY (class_id) REFERENCES classes (id),
-            FOREIGN KEY (schedule_id) REFERENCES duty_schedule (id)
-        );
+    # 表结构与 duty_scheduler.db.SCHEMA_STATEMENTS 单一来源保持一致
+    for statement in SCHEMA_STATEMENTS:
+        cur.execute(statement)
+    cur.execute('''
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_duty_schedule_class_date
+        ON duty_schedule (class_id, date)
     ''')
 
     # 插入测试学期
@@ -161,25 +98,25 @@ def init_test_data():
         )
     print(f'添加高二一班学生: A组{len(c_a_names)}人, B组{len(c_b_names)}人')
 
-    # 插入系统节假日
-    SYSTEM_HOLIDAYS = {
-        '2026-04-04': '清明节', '2026-04-05': '清明节', '2026-04-06': '清明节',
-        '2026-05-01': '劳动节', '2026-05-02': '劳动节', '2026-05-03': '劳动节',
-        '2026-05-04': '劳动节', '2026-05-05': '劳动节',
-        '2026-06-19': '端午节', '2026-06-20': '端午节', '2026-06-21': '端午节',
-    }
+    # 插入系统节假日（来自 duty_scheduler/data/holidays.json）
+    inserted = 0
     for date_str, name in SYSTEM_HOLIDAYS.items():
         cur.execute(
-            'INSERT INTO holidays (date, name, is_system, semester_id) VALUES (?, ?, 1, ?)',
+            'INSERT OR IGNORE INTO holidays (date, name, is_system, semester_id) VALUES (?, ?, 1, ?)',
             [date_str, name, semester_id]
         )
-    print(f'添加系统节假日: {len(SYSTEM_HOLIDAYS)}天')
+        inserted += 1
+    print(f'添加系统节假日: {inserted}天')
 
     conn.commit()
     conn.close()
-    print('\n[OK] 测试数据初始化完成！')
+    print('\n[OK] 演示数据初始化完成！')
     print('运行 python app.py 启动服务')
 
 
 if __name__ == '__main__':
+    if '--force' not in sys.argv:
+        print('本脚本会删除现有数据库并写入演示数据！')
+        print('确认执行请运行: python init_db.py --force')
+        sys.exit(1)
     init_test_data()

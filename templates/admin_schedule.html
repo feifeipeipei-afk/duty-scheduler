@@ -1,15 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>排班 — 值日排班系统</title>
-  <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-<button class="mobile-toggle" id="mobileToggle">☰</button><div class="sidebar-overlay" id="sidebarOverlay"></div>
-<aside class="sidebar" id="sidebar"><div class="sidebar-brand"><h2>值日排班管理</h2><p>老师工作台</p></div><nav class="sidebar-nav"><a href="/admin"><span class="nav-icon">🏠</span> 工作台</a><a href="/admin/schedule" class="active"><span class="nav-icon">📝</span> 排班</a><a href="/admin/classes"><span class="nav-icon">🏫</span> 班级学生</a><a href="/admin/holidays"><span class="nav-icon">🎌</span> 假期设置</a><a href="/admin/stats"><span class="nav-icon">📊</span> 记录与统计</a><a href="/admin/semesters"><span class="nav-icon">⚙️</span> 学期设置</a></nav></aside>
-<main class="main-content page-enter">
+{% extends "base.html" %}
+{% block title %}排班 — 值日排班系统{% endblock %}
+{% block main_class %} page-enter{% endblock %}
+
+{% block content %}
   <div class="page-header">
     <div><h2>排班</h2><p class="page-subtitle">选择班级和月份，预览确认后发布。</p></div>
     <div class="toolbar-actions">
@@ -19,9 +12,9 @@
   </div>
 
   <div class="teacher-toolbar">
-    <div class="form-group"><label>班级</label><select id="classSelect" class="form-control"></select></div>
-    <div class="form-group"><label>年份</label><select id="yearSelect" class="form-control"></select></div>
-    <div class="form-group"><label>月份</label><select id="monthSelect" class="form-control"></select></div>
+    <div class="form-group"><label for="classSelect">班级</label><select id="classSelect" class="form-control"></select></div>
+    <div class="form-group"><label for="yearSelect">年份</label><select id="yearSelect" class="form-control"></select></div>
+    <div class="form-group"><label for="monthSelect">月份</label><select id="monthSelect" class="form-control"></select></div>
     <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" id="previewBtn">生成预览</button></div>
   </div>
 
@@ -46,11 +39,12 @@
     <div class="card-header">最近操作记录</div>
     <div class="card-body"><div id="logList"></div></div>
   </div>
-</main>
+{% endblock %}
 
-<div class="modal-overlay" id="previewModal">
+{% block modals %}
+<div class="modal-overlay" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle" aria-hidden="true">
   <div class="modal-box modal-wide">
-    <div class="modal-header">确认发布排班</div>
+    <div class="modal-header" id="previewModalTitle">确认发布排班</div>
     <div id="previewBody"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" id="cancelPreviewBtn">取消</button>
@@ -59,27 +53,27 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="swapModal">
+<div class="modal-overlay" id="swapModal" role="dialog" aria-modal="true" aria-labelledby="swapModalTitle" aria-hidden="true">
   <div class="modal-box">
-    <div class="modal-header">换人</div>
+    <div class="modal-header" id="swapModalTitle">换人</div>
     <div id="swapBody"></div>
-    <div class="form-group"><label>原因</label><input id="swapReason" class="form-control" placeholder="可不填，如：请假、临时调整"></div>
+    <div class="form-group"><label for="swapReason">原因</label><input id="swapReason" class="form-control" placeholder="可不填，如：请假、临时调整"></div>
     <div class="modal-actions"><button class="btn btn-outline" id="cancelSwapBtn">取消</button><button class="btn btn-primary" id="confirmSwapBtn">确认换人</button></div>
   </div>
 </div>
 
-<div class="modal-overlay" id="leaveModal">
+<div class="modal-overlay" id="leaveModal" role="dialog" aria-modal="true" aria-labelledby="leaveModalTitle" aria-hidden="true">
   <div class="modal-box">
-    <div class="modal-header">请假换人</div>
+    <div class="modal-header" id="leaveModalTitle">请假换人</div>
     <div id="leaveBody"></div>
-    <div class="form-group"><label>原因</label><input id="leaveReason" class="form-control" placeholder="如：病假、事假、临时安排"></div>
+    <div class="form-group"><label for="leaveReason">原因</label><input id="leaveReason" class="form-control" placeholder="如：病假、事假、临时安排"></div>
     <div class="teacher-note">系统会自动从同组中选择当天没有值日、次数较少的学生替补。</div>
     <div class="modal-actions"><button class="btn btn-outline" id="cancelLeaveBtn">取消</button><button class="btn btn-primary" id="confirmLeaveBtn">确认请假</button></div>
   </div>
 </div>
+{% endblock %}
 
-<div id="toastContainer" class="toast-container"></div>
-<script src="/static/js/admin.js"></script>
+{% block scripts %}
 <script>
 var now = new Date();
 var state = {
@@ -167,7 +161,7 @@ function renderNoClassState() {
   setActionAvailability(false);
   document.getElementById('monthTitle').textContent = '本月排班';
   document.getElementById('scheduleList').innerHTML =
-    '<div class="empty-state"><div class="empty-icon">🏫</div><p>还没有班级，先添加班级或导入学生名单。</p><a class="btn btn-primary btn-sm" href="/admin/classes?action=import">去导入学生名单</a></div>';
+    '<div class="empty-state"><div class="empty-icon" aria-hidden="true">🏫</div><p>还没有班级，先添加班级或导入学生名单。</p><a class="btn btn-primary btn-sm" href="/admin/classes?action=import">去导入学生名单</a></div>';
   document.getElementById('logList').innerHTML = '<div class="empty-state">暂无操作记录</div>';
 }
 
@@ -186,7 +180,7 @@ function renderSchedules() {
     document.getElementById('bulkPendingBtn').classList.add('hidden');
     state.bulk = false;
     document.getElementById('bulkModeBtn').textContent = '批量操作';
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>这个月还没有排班，点击上方“生成预览”。</p></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon" aria-hidden="true">📅</div><p>这个月还没有排班，点击上方“生成预览”。</p></div>';
     return;
   }
   document.getElementById('bulkModeBtn').disabled = false;
@@ -194,7 +188,7 @@ function renderSchedules() {
     var status = s.status === 'completed' ? '已完成' : '待完成';
     var cls = s.status === 'completed' ? 'status-completed' : 'status-pending';
     return '<div class="schedule-row" data-id="'+s.id+'">' +
-      '<label class="bulk-check '+(state.bulk ? '' : 'hidden')+'"><input type="checkbox" value="'+s.id+'"></label>' +
+      '<label class="bulk-check '+(state.bulk ? '' : 'hidden')+'"><input type="checkbox" value="'+s.id+'" aria-label="选择 '+s.date+' 的排班"></label>' +
       '<div class="schedule-main"><strong>'+escapeHtml(s.date)+'</strong><span class="status-badge '+cls+'">'+status+'</span></div>' +
       '<div class="schedule-people"><span>'+escapeHtml(s.student1_name || '待分配')+' · '+escapeHtml(s.duty1_type || '-')+'</span><span>'+escapeHtml(s.student2_name || '待分配')+' · '+escapeHtml(s.duty2_type || '-')+'</span></div>' +
       '<div class="row-actions">' +
@@ -237,7 +231,7 @@ function loadLogs() {
 }
 
 function actionName(t) {
-  var map = {publish_schedule:'发布排班', swap:'调班', revert_swap:'撤销调班', leave:'请假', complete:'完成', bulk_complete:'批量完成', bulk_pending:'批量改回', import_students:'导入学生'};
+  var map = {publish_schedule:'发布排班', swap:'调班', revert_swap:'撤销调班', leave:'请假', complete:'完成', bulk_complete:'批量完成', bulk_pending:'批量改回', import_students:'导入学生', cleanup_student:'学生停用清理'};
   return map[t] || t || '操作';
 }
 
@@ -325,8 +319,8 @@ function openSwap(schedule) {
 }
 
 function studentChoices(s, side) {
-  return '<button class="choice" data-side="'+side+'" data-sid="'+s.id+'" data-slot="0">'+escapeHtml(s.student1_name || '待分配')+' · '+escapeHtml(s.duty1_type || '-')+'</button>' +
-         '<button class="choice" data-side="'+side+'" data-sid="'+s.id+'" data-slot="1">'+escapeHtml(s.student2_name || '待分配')+' · '+escapeHtml(s.duty2_type || '-')+'</button>';
+  return '<button type="button" class="choice" data-side="'+side+'" data-sid="'+s.id+'" data-slot="0">'+escapeHtml(s.student1_name || '待分配')+' · '+escapeHtml(s.duty1_type || '-')+'</button>' +
+         '<button type="button" class="choice" data-side="'+side+'" data-sid="'+s.id+'" data-slot="1">'+escapeHtml(s.student2_name || '待分配')+' · '+escapeHtml(s.duty2_type || '-')+'</button>';
 }
 
 document.addEventListener('click', function(e) {
@@ -357,8 +351,8 @@ function openLeave(schedule) {
   state.leave = {schedule:schedule, studentId:null};
   document.getElementById('leaveBody').innerHTML =
     '<div class="teacher-note">'+escapeHtml(schedule.date)+' 请选择请假的学生。</div>' +
-    '<button class="choice" data-leave-student="'+schedule.student1_id+'">'+escapeHtml(schedule.student1_name || '待分配')+' · '+escapeHtml(schedule.duty1_type || '-')+'</button>' +
-    '<button class="choice" data-leave-student="'+schedule.student2_id+'">'+escapeHtml(schedule.student2_name || '待分配')+' · '+escapeHtml(schedule.duty2_type || '-')+'</button>';
+    '<button type="button" class="choice" data-leave-student="'+schedule.student1_id+'">'+escapeHtml(schedule.student1_name || '待分配')+' · '+escapeHtml(schedule.duty1_type || '-')+'</button>' +
+    '<button type="button" class="choice" data-leave-student="'+schedule.student2_id+'">'+escapeHtml(schedule.student2_name || '待分配')+' · '+escapeHtml(schedule.duty2_type || '-')+'</button>';
   document.getElementById('leaveReason').value = '';
   openModal('leaveModal');
 }
@@ -391,7 +385,9 @@ function openPrint() {
 
 function exportExcel() {
   if (!selectedClassId()) { showToast('请先选择班级', 'error'); return; }
-  window.location.href = '/admin/schedule/export?class_id=' + selectedClassId() + '&month=' + selectedMonth();
+  api.download('/admin/schedule/export?class_id=' + selectedClassId() + '&month=' + selectedMonth(), 'schedule-' + selectedMonth() + '.xlsx')
+    .then(function(){ showToast('已导出', 'success'); })
+    .catch(function(e){ showToast(e.message || '导出失败', 'error'); });
 }
 
 function handleInitialAction() {
@@ -404,8 +400,5 @@ function handleInitialAction() {
     openPrint();
   }
 }
-
-function openModal(id){ document.getElementById(id).classList.add('show'); }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 </script>
-</body></html>
+{% endblock %}

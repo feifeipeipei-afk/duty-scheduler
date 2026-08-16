@@ -2,7 +2,7 @@
    值日排班系统 — Apple / WeChat 极简风格
    纯净、克制、呼吸感
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+/* 使用系统字体栈：国内环境无需外部字体请求，首屏渲染更快 */
 
 :root {
   --white:       #FFFFFF;
@@ -12,16 +12,16 @@
   --divider:     #F7F7F7;
   --text-0:      #191919;
   --text-1:      #576B95;
-  --text-2:      #999999;
-  --text-3:      #B2B2B2;
-  --text-4:      #D9D9D9;
+  --text-2:      #6B6B6B;
+  --text-3:      #7A7A7A;
+  --text-4:      #8C8C8C;
   --green:       #07C160;
   --green-bg:    #E8F8EE;
   --blue:        #1A73E8;
   --blue-bg:     #E8F0FE;
   --red:         #FA5151;
   --red-bg:      #FEE8E8;
-  --orange:      #FF8800;
+  --orange:      #C46A00;
   --orange-bg:   #FFF4E5;
   --radius:      12px;
   --radius-lg:   16px;
@@ -34,7 +34,8 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { font-size: 16px; }
 body {
-  font-family: 'Noto Sans SC', -apple-system, 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+               'Microsoft YaHei', 'Helvetica Neue', sans-serif;
   background: var(--bg);
   color: var(--text-1);
   line-height: 1.6;
@@ -211,15 +212,18 @@ a:hover { color: #0D5BBF; }
   cursor: pointer;
   transition: all var(--transition);
   background: var(--white);
+  font-family: inherit;
+  line-height: 1.5;
 }
+.group-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .group-option:hover { border-color: var(--blue); }
 .group-option.selected {
   border-color: var(--green);
   background: var(--green-bg);
 }
-.group-option .g-icon { font-size: 1.6rem; margin-bottom: 8px; }
-.group-option .g-title { font-weight: 600; font-size: 0.9rem; color: var(--text-0); }
-.group-option .g-desc { font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
+.group-option .g-icon { display: block; font-size: 1.6rem; margin-bottom: 8px; }
+.group-option .g-title { display: block; font-weight: 600; font-size: 0.9rem; color: var(--text-0); }
+.group-option .g-desc { display: block; font-size: 0.75rem; color: var(--text-3); margin-top: 2px; }
 
 /* 提示条 */
 .tip-bar {
@@ -269,13 +273,17 @@ tbody tr:last-child td { border-bottom: none; }
   flex: 1;
   padding: 8px 0;
   text-align: center;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
+  font-family: inherit;
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-3);
+  background: transparent;
   transition: all var(--transition);
 }
+.tab-item:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
 .tab-item:hover { color: var(--text-1); }
 .tab-item.active {
   background: var(--white);
@@ -692,9 +700,8 @@ tbody tr:last-child td { border-bottom: none; }
   color: white; font-size: 0.75rem; font-weight: 600;
   transition: width 0.6s ease;
 }
-.bar-fill.a-group { background: #B2B2B2; }
+.bar-fill.a-group { background: #8C8C8C; }
 .bar-fill.b-group { background: var(--green); }
-.bar-count { min-width: 32px; text-align: right; font-size: 0.82rem; color: var(--text-3); font-weight: 500; }
 
 /* 均衡度 */
 .balance-bar { height: 6px; background: var(--bg); border-radius: 100px; margin-top: 8px; overflow: hidden; }
@@ -713,7 +720,10 @@ tbody tr:last-child td { border-bottom: none; }
   cursor: pointer;
   transition: all var(--transition);
   text-align: center;
+  font-family: inherit;
+  line-height: 1.5;
 }
+.student-card:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .student-card:hover { border-color: var(--green); }
 .student-card .s-name { font-weight: 600; color: var(--text-0); font-size: 0.9rem; }
 .student-card .s-count { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
@@ -743,40 +753,39 @@ tbody tr:last-child td { border-bottom: none; }
 .modal-header { font-size: 1.05rem; font-weight: 600; margin-bottom: 20px; color: var(--text-0); }
 
 /* ============================================================
-   排班卡片
-   ============================================================ */
-.duty-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 10px;
-  border: 1px solid #EDEDED;
-  box-shadow: none;
-}
-.duty-date { font-weight: 600; color: var(--text-0); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
-.duty-students { display: flex; gap: 8px; flex-wrap: wrap; }
-.duty-student {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; background: var(--bg); border-radius: 100px;
-  font-size: 0.82rem; color: var(--text-1);
-}
-.duty-actions { margin-top: 10px; display: flex; gap: 8px; }
-
-/* 日历导航 */
-.cal-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
-.cal-nav button {
-  padding: 8px 16px; background: var(--white); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); cursor: pointer; font-family: inherit;
-  font-size: 0.85rem; color: var(--text-2); transition: all var(--transition);
-}
-.cal-nav button:hover { border-color: var(--blue); color: var(--blue); }
-.cal-month { font-size: 1.1rem; font-weight: 600; color: var(--text-0); min-width: 120px; text-align: center; }
-
-/* ============================================================
    辅助
    ============================================================ */
 .hidden { display: none !important; }
 .text-center { text-align: center; }
+.text-danger { color: var(--red); }
+.muted-note { color: var(--text-2); font-size: 0.85rem; margin-bottom: 12px; }
+
+/* 屏幕阅读器专用（视觉隐藏） */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* 侧边栏登出（POST 表单按钮，样式与导航一致） */
+.nav-logout { margin-top: 12px; }
+.nav-logout-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 10px 14px;
+  background: none; border: none; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 0.9rem; color: var(--text-2);
+  cursor: pointer; transition: all var(--transition);
+}
+.nav-logout-btn:hover { background: var(--bg); color: var(--red); }
+
+/* 可点击的统计卡片（工作台"待处理问题"） */
+.stat-card-link { cursor: pointer; transition: all var(--transition); }
+.stat-card-link:hover, .stat-card-link:focus-visible { border-color: var(--green); }
+a.stat-card-link { text-decoration: none; color: inherit; }
+
+/* 危险操作按钮（删除等） */
+.btn-danger { color: var(--red); }
+.btn-danger:hover { color: #D03030; }
 
 /* ============================================================
    响应式

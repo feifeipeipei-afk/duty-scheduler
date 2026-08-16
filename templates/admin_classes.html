@@ -1,26 +1,7 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>班级管理 — 值日排班系统</title>
-  <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-  <button class="mobile-toggle" id="mobileToggle">☰</button>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand"><h2>值日排班管理</h2><p>老师工作台</p></div>
-    <nav class="sidebar-nav">
-      <a href="/admin"><span class="nav-icon">🏠</span> 工作台</a>
-      <a href="/admin/schedule"><span class="nav-icon">📝</span> 排班</a>
-      <a href="/admin/classes" class="active"><span class="nav-icon">🏫</span> 班级学生</a>
-      <a href="/admin/holidays"><span class="nav-icon">🎌</span> 假期设置</a>
-      <a href="/admin/stats"><span class="nav-icon">📊</span> 记录与统计</a>
-      <a href="/admin/semesters"><span class="nav-icon">⚙️</span> 学期设置</a>
-    </nav>
-  </aside>
-  <main class="main-content">
+{% extends "base.html" %}
+{% block title %}班级管理 — 值日排班系统{% endblock %}
+
+{% block content %}
     <div class="page-header">
       <div><h2>班级学生</h2><p class="page-subtitle">管理班级、导入名单，避免重复登记。</p></div>
       <div class="toolbar-actions"><a href="/admin/students/import-template" class="btn btn-outline btn-sm">下载模板</a><button class="btn btn-outline btn-sm" onclick="openMerge()">合并重复学生</button><button class="btn btn-primary btn-sm" onclick="openImport()">导入学生名单</button></div>
@@ -30,11 +11,11 @@
       <div class="card-body">
         <form id="addClassForm" class="form-row">
           <div class="form-group">
-            <label>班级名称</label>
+            <label for="className">班级名称</label>
             <input type="text" id="className" class="form-control" placeholder="如：高一三班" required>
           </div>
           <div class="form-group">
-            <label>值日星期</label>
+            <label for="dutyDay">值日星期</label>
             <select id="dutyDay" class="form-control" required>
               <option value="">请选择</option>
               <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
@@ -59,29 +40,32 @@
         </div>
       </div>
     </div>
-  </main>
-  <div class="modal-overlay" id="importModal">
+{% endblock %}
+
+{% block modals %}
+  <div class="modal-overlay" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle" aria-hidden="true">
     <div class="modal-box">
-      <div class="modal-header">导入学生名单</div>
-      <div class="form-group"><label>班级</label><select id="importClass" class="form-control"></select></div>
-      <div class="form-group"><label>名单文件</label><input id="importFile" type="file" class="form-control" accept=".xlsx,.csv,.txt"></div>
+      <div class="modal-header" id="importModalTitle">导入学生名单</div>
+      <div class="form-group"><label for="importClass">班级</label><select id="importClass" class="form-control"></select></div>
+      <div class="form-group"><label for="importFile">名单文件</label><input id="importFile" type="file" class="form-control" accept=".xlsx,.csv,.txt"></div>
       <div class="teacher-note">模板只需要两列：姓名、值日段。值日段可填“上半学期”或“下半学期”。重复姓名默认跳过。</div>
       <div id="importPreview"></div>
       <div class="modal-actions"><button class="btn btn-outline" onclick="closeImport()">取消</button><button class="btn btn-outline" onclick="previewImport()">预览</button><button class="btn btn-primary" id="confirmImportBtn" onclick="confirmImport()" disabled>确认导入</button></div>
     </div>
   </div>
-  <div class="modal-overlay" id="mergeModal">
+  <div class="modal-overlay" id="mergeModal" role="dialog" aria-modal="true" aria-labelledby="mergeModalTitle" aria-hidden="true">
     <div class="modal-box">
-      <div class="modal-header">合并重复学生</div>
+      <div class="modal-header" id="mergeModalTitle">合并重复学生</div>
       <div class="teacher-note">选择保留学生和要合并停用的学生。系统会把排班、请假和调班记录迁移到保留学生。</div>
-      <div class="form-group"><label>班级</label><select id="mergeClass" class="form-control" onchange="loadMergeStudents()"></select></div>
-      <div class="form-group"><label>保留学生</label><select id="keepStudent" class="form-control"></select></div>
-      <div class="form-group"><label>合并并停用</label><select id="removeStudent" class="form-control"></select></div>
+      <div class="form-group"><label for="mergeClass">班级</label><select id="mergeClass" class="form-control" onchange="loadMergeStudents()"></select></div>
+      <div class="form-group"><label for="keepStudent">保留学生</label><select id="keepStudent" class="form-control"></select></div>
+      <div class="form-group"><label for="removeStudent">合并并停用</label><select id="removeStudent" class="form-control"></select></div>
       <div class="modal-actions"><button class="btn btn-outline" onclick="closeMerge()">取消</button><button class="btn btn-primary" onclick="confirmMerge()">确认合并</button></div>
     </div>
   </div>
-  <div id="toastContainer" class="toast-container"></div>
-  <script src="/static/js/admin.js"></script>
+{% endblock %}
+
+{% block scripts %}
   <script>
     var WD = ['周日','周一','周二','周三','周四','周五','周六'];
     var currentClasses = [], importRows = [];
@@ -119,18 +103,18 @@
         mergeClass.innerHTML = currentClasses.map(function(c){ return '<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>'; }).join('');
       }
       var tb = document.getElementById('classListBody');
-      if (!classes || !classes.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🏫</div><p>暂无班级</p></div></td></tr>'; return; }
+      if (!classes || !classes.length) { tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon" aria-hidden="true">🏫</div><p>暂无班级</p></div></td></tr>'; return; }
       tb.innerHTML = classes.map(function(c) {
         var wd = WD[c.duty_weekday] || c.duty_weekday;
         var g = c.current_group || 'A';
         var gl = g === 'A' ? '上半学期' : '下半学期';
         var gc = g === 'A' ? 'badge-blue' : 'badge-green';
         return '<tr class="expandable-row" data-id="'+c.id+'">' +
-          '<td><span class="expand-icon">▶</span></td>' +
+          '<td><span class="expand-icon" aria-hidden="true">▶</span></td>' +
           '<td><strong>'+escapeHtml(c.name)+'</strong></td>' +
           '<td>'+wd+'</td>' +
           '<td><span class="badge '+gc+'">'+gl+'</span></td>' +
-          '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();sw('+c.id+')">切换</button> <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="event.stopPropagation();del('+c.id+')">删除</button></td></tr>' +
+          '<td><button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();sw('+c.id+')">切换</button> <button class="btn btn-sm btn-ghost btn-danger" onclick="event.stopPropagation();del('+c.id+')">删除</button></td></tr>' +
           '<tr class="sub-row hidden" id="s-'+c.id+'"><td colspan="5"><div class="sub-table-wrapper"><h4>学生列表</h4><div id="st-'+c.id+'" class="loading"><div class="spinner"></div></div></div></td></tr>';
       }).join('');
       tb.querySelectorAll('.expandable-row').forEach(function(r) {
@@ -146,11 +130,13 @@
       api.get('/admin/classes/'+cid+'/students').then(function(stus) {
         var el = document.getElementById('st-'+cid);
         var addForm = '<form class="inline-add-student" onsubmit="addStudent(event,'+cid+')">' +
+          '<label class="sr-only" for="newStudentName-'+cid+'">补录学生姓名</label>' +
           '<input class="form-control" id="newStudentName-'+cid+'" placeholder="补录学生姓名">' +
-          '<select class="form-control" id="newStudentGroup-'+cid+'"><option value="A">上半学期</option><option value="B">下半学期</option></select>' +
+          '<label class="sr-only" for="newStudentGroup-'+cid+'">值日段</label>' +
+          '<select class="form-control" id="newStudentGroup-'+cid+'" aria-label="值日段"><option value="A">上半学期</option><option value="B">下半学期</option></select>' +
           '<button class="btn btn-primary btn-sm" type="submit">添加学生</button>' +
         '</form>';
-        if (!stus || !stus.length) { el.innerHTML = addForm + '<p style="color:var(--text-3);padding:4px 0">暂无学生，请导入名单或在这里补录。</p>'; return; }
+        if (!stus || !stus.length) { el.innerHTML = addForm + '<p class="muted-note">暂无学生，请导入名单或在这里补录。</p>'; return; }
         el.innerHTML = addForm + '<table><thead><tr><th>姓名</th><th>值日段</th><th>操作</th></tr></thead><tbody>'+stus.map(function(s) {
           var g = s.group_name || 'A';
           var gl = g === 'A' ? '上半学期' : '下半学期';
@@ -159,9 +145,9 @@
           var nl = g === 'A' ? '调到下半学期' : '调到上半学期';
           return '<tr><td>'+escapeHtml(s.name)+'</td>' +
             '<td><span class="badge '+gc+'">'+gl+'</span></td>' +
-            '<td><button class="btn btn-sm btn-ghost" onclick="chg('+s.id+',\''+ng+'\','+cid+')">'+nl+'</button> <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="rm('+s.id+','+cid+')">移除</button></td></tr>';
+            '<td><button class="btn btn-sm btn-ghost" onclick="chg('+s.id+',\''+ng+'\','+cid+')">'+nl+'</button> <button class="btn btn-sm btn-ghost btn-danger" onclick="rm('+s.id+','+cid+')">移除</button></td></tr>';
         }).join('')+'</tbody></table>';
-      }).catch(function() { document.getElementById('st-'+cid).innerHTML = '<p style="color:var(--red)">加载失败</p>'; });
+      }).catch(function() { document.getElementById('st-'+cid).innerHTML = '<p class="muted-note text-danger">加载失败</p>'; });
     }
     function addStudent(e, cid) {
       e.preventDefault();
@@ -181,9 +167,9 @@
     function openImport() {
       document.getElementById('importPreview').innerHTML = '';
       document.getElementById('confirmImportBtn').disabled = true;
-      document.getElementById('importModal').classList.add('show');
+      openModal('importModal');
     }
-    function closeImport() { document.getElementById('importModal').classList.remove('show'); }
+    function closeImport() { closeModal('importModal'); }
     function previewImport() {
       var file = document.getElementById('importFile').files[0];
       var classId = document.getElementById('importClass').value;
@@ -209,10 +195,10 @@
       }).catch(function(e){ showToast(e.message,'error'); });
     }
     function openMerge() {
-      document.getElementById('mergeModal').classList.add('show');
+      openModal('mergeModal');
       loadMergeStudents();
     }
-    function closeMerge() { document.getElementById('mergeModal').classList.remove('show'); }
+    function closeMerge() { closeModal('mergeModal'); }
     function loadMergeStudents() {
       var cid = document.getElementById('mergeClass').value;
       if (!cid) return;
@@ -237,5 +223,4 @@
       }).catch(function(e){ showToast(e.message,'error'); });
     }
   </script>
-</body>
-</html>
+{% endblock %}

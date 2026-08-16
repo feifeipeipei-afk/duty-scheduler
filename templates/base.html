@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}值日排班管理{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<button class="mobile-toggle" id="mobileToggle" aria-label="打开导航菜单" aria-expanded="false">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand"><h2>值日排班管理</h2><p>老师工作台</p></div>
+  <nav class="sidebar-nav" aria-label="后台导航">
+    <a href="/admin"{% if request.path == '/admin' %} class="active"{% endif %} aria-current="{% if request.path == '/admin' %}page{% endif %}"><span class="nav-icon" aria-hidden="true">🏠</span> 工作台</a>
+    <a href="/admin/schedule"{% if request.path == '/admin/schedule' %} class="active"{% endif %} aria-current="{% if request.path == '/admin/schedule' %}page{% endif %}"><span class="nav-icon" aria-hidden="true">📝</span> 排班</a>
+    <a href="/admin/classes"{% if request.path == '/admin/classes' %} class="active"{% endif %} aria-current="{% if request.path == '/admin/classes' %}page{% endif %}"><span class="nav-icon" aria-hidden="true">🏫</span> 班级学生</a>
+    <a href="/admin/holidays"{% if request.path == '/admin/holidays' %} class="active"{% endif %} aria-current="{% if request.path == '/admin/holidays' %}page{% endif %}"><span class="nav-icon" aria-hidden="true">🎌</span> 假期设置</a>
+    <a href="/admin/stats"{% if request.path == '/admin/stats' %} class="active"{% endif %} aria-current="{% if request.path == '/admin/stats' %}page{% endif %}"><span class="nav-icon" aria-hidden="true">📊</span> 记录与统计</a>
+    <a href="/admin/semesters"{% if request.path == '/admin/semesters' %} class="active"{% endif %} aria-current="{% if request.path == '/admin/semesters' %}page{% endif %}"><span class="nav-icon" aria-hidden="true">⚙️</span> 学期设置</a>
+    <form method="post" action="/admin/logout" class="nav-logout">
+      <button type="submit" class="nav-logout-btn"><span class="nav-icon" aria-hidden="true">🚪</span> 退出登录</button>
+    </form>
+  </nav>
+</aside>
+<main class="main-content{% block main_class %}{% endblock %}">
+{% block content %}{% endblock %}
+</main>
+{% block modals %}{% endblock %}
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+<script src="/static/js/admin.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

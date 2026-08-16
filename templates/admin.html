@@ -1,26 +1,8 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>老师工作台 — 值日排班系统</title>
-  <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-  <button class="mobile-toggle" id="mobileToggle">☰</button>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-brand"><h2>值日排班管理</h2><p>老师工作台</p></div>
-    <nav class="sidebar-nav">
-      <a href="/admin" class="active"><span class="nav-icon">🏠</span> 工作台</a>
-      <a href="/admin/schedule"><span class="nav-icon">📝</span> 排班</a>
-      <a href="/admin/classes"><span class="nav-icon">🏫</span> 班级学生</a>
-      <a href="/admin/holidays"><span class="nav-icon">🎌</span> 假期设置</a>
-      <a href="/admin/stats"><span class="nav-icon">📊</span> 记录与统计</a>
-      <a href="/admin/semesters"><span class="nav-icon">⚙️</span> 学期设置</a>
-    </nav>
-  </aside>
-  <main class="main-content page-enter">
+{% extends "base.html" %}
+{% block title %}老师工作台 — 值日排班系统{% endblock %}
+{% block main_class %} page-enter{% endblock %}
+
+{% block content %}
     <div class="page-header">
       <div>
         <h2>老师工作台</h2>
@@ -42,30 +24,30 @@
         <div class="stat-value" id="c3">-</div>
         <div class="stat-label">本月排班</div>
       </div>
-      <div class="stat-card" onclick="location.href='/admin/schedule#health'" style="cursor:pointer">
+      <a class="stat-card stat-card-link" href="/admin/schedule#health">
         <div class="stat-value" id="c4">-</div>
         <div class="stat-label">待处理问题</div>
-      </div>
+      </a>
     </div>
 
     <div class="quick-actions">
       <button class="action-tile" onclick="location.href='/admin/schedule?action=generate'">
-        <span class="action-icon">📝</span>
+        <span class="action-icon" aria-hidden="true">📝</span>
         <strong>生成本月排班</strong>
         <small>预览确认后发布</small>
       </button>
       <button class="action-tile" onclick="location.href='/admin/classes?action=import'">
-        <span class="action-icon">⬆️</span>
+        <span class="action-icon" aria-hidden="true">⬆️</span>
         <strong>导入学生名单</strong>
         <small>支持 Excel / CSV</small>
       </button>
       <button class="action-tile" onclick="location.href='/admin/schedule?action=print'">
-        <span class="action-icon">🖨️</span>
+        <span class="action-icon" aria-hidden="true">🖨️</span>
         <strong>打印/导出排班</strong>
         <small>适合张贴和留档</small>
       </button>
       <button class="action-tile" onclick="location.href='/admin/schedule#health'">
-        <span class="action-icon">✅</span>
+        <span class="action-icon" aria-hidden="true">✅</span>
         <strong>检查问题</strong>
         <small>生成前自动体检</small>
       </button>
@@ -77,10 +59,10 @@
         <div class="loading"><div class="spinner"></div></div>
       </div>
     </div>
-  </main>
-  <div id="toastContainer" class="toast-container"></div>
-  <script src="/static/js/admin.js"></script>
-  <script>
+{% endblock %}
+
+{% block scripts %}
+    <script>
     document.addEventListener('DOMContentLoaded', function() {
       Promise.all([
         api.get('/admin/stats/quick').catch(function(){ return {}; }),
@@ -107,6 +89,5 @@
         return '<a class="issue-row '+cls+'" href="'+(i.target || '/admin/schedule')+'"><span>'+(i.level === 'block' ? '需处理' : '提醒')+'</span><strong>'+escapeHtml(i.message)+'</strong></a>';
       }).join('') + '</div>';
     }
-  </script>
-</body>
-</html>
+    </script>
+{% endblock %}

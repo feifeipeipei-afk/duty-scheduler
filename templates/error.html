@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>{{ code }} — 值日排班管理</title><link rel="stylesheet" href="/static/css/style.css">
+<style>
+  body { background: #EDEDED; }
+  .error-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .error-box { background: #FFFFFF; border-radius: 12px; padding: 48px 40px; width: 100%; max-width: 400px; border: 1px solid #EDEDED; text-align: center; }
+  .error-code { font-size: 3rem; font-weight: 600; color: #07C160; line-height: 1; }
+  .error-message { font-size: 0.95rem; color: #191919; margin-top: 16px; }
+  .error-actions { margin-top: 28px; display: flex; gap: 12px; justify-content: center; }
+  .error-btn { display: inline-block; padding: 10px 22px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; text-decoration: none; border: none; font-family: inherit; }
+  .error-btn.primary { background: #07C160; color: #FFFFFF; }
+  .error-btn.primary:hover { background: #06AD56; }
+  .error-btn.secondary { background: #F5F5F5; color: #191919; }
+</style>
+</head>
+<body>
+  <div class="error-wrap">
+    <div class="error-box">
+      <div class="error-code" aria-hidden="true">{{ code }}</div>
+      <p class="error-message">{{ message }}</p>
+      <div class="error-actions">
+        <a class="error-btn primary" href="/">返回首页</a>
+        <a class="error-btn secondary" href="javascript:history.back()">返回上一页</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
