@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}值日记录 — 值日记录系统{% endblock %}
+{% block main_class %} page-enter{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div><h2>值日记录</h2><p class="page-subtitle">学生自主提交的值日记录会汇总在这里，可以代补录、删除误提交、导出 Excel。</p></div>
+    <div class="toolbar-actions">
+      <button class="btn btn-primary btn-sm" id="addRecordBtn">补录记录</button>
+    </div>
+  </div>
+
+  <div class="teacher-toolbar">
+    <div class="form-group"><label for="classSelect">班级</label><select id="classSelect" class="form-control"></select></div>
+    <div class="form-group"><label for="monthInput">月份</label><input type="month" id="monthInput" class="form-control"></div>
+    <div class="form-group"><label>&nbsp;</label>
+      <div class="toolbar-actions">
+        <button class="btn btn-primary" id="queryBtn">查询</button>
+        <button class="btn btn-outline" id="exportBtn">导出 Excel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span id="recordsTitle">值日记录</span></div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>日期</th><th>星期</th><th>姓名</th><th>组别</th><th>职责</th><th>提交时间</th><th>操作</th></tr></thead>
+          <tbody id="recordsBody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">操作记录（最近 200 条）</div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>时间</th><th>操作</th><th>班级</th><th>学生</th><th>说明</th></tr></thead>
+          <tbody id="logsBody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block modals %}
+  <div class="modal-overlay" id="addRecordModal" role="dialog" aria-modal="true" aria-labelledby="addRecordModalTitle" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header" id="addRecordModalTitle">补录值日记录</div>
+      <div class="form-group"><label for="recordClass">班级</label><select id="recordClass" class="form-control"></select></div>
+      <div class="form-group"><label for="recordStudent">学生</label><select id="recordStudent" class="form-control"></select></div>
+      <div class="form-group"><label for="recordDate">值日日期</label><input type="date" id="recordDate" class="form-control"></div>
+      <div class="form-group"><label for="recordDutyType">职责</label>
+        <select id="recordDutyType" class="form-control">
+          <option value="扫地">扫地</option>
+          <option value="擦桌子">擦桌子</option>
+        </select>
+      </div>
+      <div class="teacher-note">补录会立即生效；同一学生同一天只能有一条值日记录。</div>
+      <div class="modal-actions"><button class="btn btn-outline" id="cancelRecordBtn">取消</button><button class="btn btn-primary" id="confirmRecordBtn">确认补录</button></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-header" id="deleteModalTitle">删除值日记录</div>
+      <div id="deleteBody" class="teacher-note"></div>
+      <div class="modal-actions"><button class="btn btn-outline" id="cancelDeleteBtn">取消</button><button class="btn btn-primary btn-danger" id="confirmDeleteBtn">确认删除</button></div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var WD = ['周日','周一','周二','周三','周四','周五','周六'];
+var ACTION_LABELS = {
+  submit_duty: '学生提交',
+  add_record: '老师补录',
+  delete_record: '删除记录',
+  import_students: '导入学生',
+  merge_students: '合并学生'
+};
+var state = {
+  classes: [],
+  records: [],
+  logs: [],
+  pendingDelete: null
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  setupControls();
+  bindEvents();
+  loadClasses().then(function() {
+    loadRecords();
+    loadLogs();
+  });
+});
+
+function setupControls() {
+  var now = new Date();
+  document.getElementById('monthInput').value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+}
+
+function bindEvents() {
+  document.getElementById('classSelect').addEventListener('change', onClassFilterChange);
+  document.getElementById('monthInput').addEventListener('change', loadRecords);
+  document.getElementById('queryBtn').addEventListener('click', onClassFilterChange);
+  document.getElementById('exportBtn').addEventListener('click', exportExcel);
+  document.getElementById('addRecordBtn').addEventListener('click', openAddModal);
+  document.getElementById('recordClass').addEventListener('change', loadRecordStudents);
+  document.getElementById('cancelRecordBtn').addEventListener('click', function(){ closeModal('addRecordModal'); });
+  document.getElementById('confirmRecordBtn').addEventListener('click', submitRecord);
+  document.getElementById('cancelDeleteBtn').addEventListener('click', function(){ closeModal('deleteModal'); });
+  document.getElementById('confirmDeleteBtn').addEventListener('click', doDelete);
+  document.getElementById('recordsBody').addEventListener('click', handleRecordsClick);
+}
+
+function groupLabel(g) {
+  if (g === 'A') return 'A 组（上半学期值日）';
+  if (g === 'B') return 'B 组（下半学期值日）';
+  return g || '';
+}
+
+function weekdayName(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  return WD[d.getDay()];
+}
+
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function selectedMonth() { return document.getElementById('monthInput').value || ''; }
+
+function loadClasses() {
+  return api.get('/admin/classes').then(function(d) {
+    state.classes = d || [];
+    var select = document.getElementById('classSelect');
+    var recordClass = document.getElementById('recordClass');
+    if (!state.classes.length) {
+      select.innerHTML = '<option value="">请先添加班级</option>';
+      if (recordClass) recordClass.innerHTML = '<option value="">请先添加班级</option>';
+      return;
+    }
+    var options = state.classes.map(function(c) {
+      return '<option value="'+c.id+'">'+escapeHtml(c.name)+'</option>';
+    }).join('');
+    select.innerHTML = '<option value="">全部班级</option>' + options;
+    if (recordClass) recordClass.innerHTML = options;
+  }).catch(function() { showToast('班级加载失败', 'error'); });
+}
+
+function onClassFilterChange() {
+  loadRecords();
+  loadLogs();
+}
+
+function loadRecords() {
+  var params = {};
+  var classId = document.getElementById('classSelect').value;
+  if (classId) params.class_id = classId;
+  var month = selectedMonth();
+  if (month) params.month = month;
+  return api.get('/admin/records', params).then(function(d) {
+    state.records = d || [];
+    renderRecords();
+  }).catch(function(e) { showToast(e.message || '记录加载失败', 'error'); });
+}
+
+function renderRecords() {
+  var tb = document.getElementById('recordsBody');
+  if (!state.records.length) {
+    tb.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon" aria-hidden="true">📋</div><p>暂无值日记录</p></div></td></tr>';
+    return;
+  }
+  tb.innerHTML = state.records.map(function(r) {
+    var g = r.student_group || '';
+    var gc = g === 'B' ? 'badge-green' : 'badge-blue';
+    return '<tr data-id="'+r.id+'">' +
+      '<td>'+escapeHtml(r.date)+'</td>' +
+      '<td>'+escapeHtml(weekdayName(r.date))+'</td>' +
+      '<td>'+escapeHtml(r.student_name || '未知学生')+'</td>' +
+      '<td><span class="badge '+gc+'">'+escapeHtml(groupLabel(g))+'</span></td>' +
+      '<td>'+escapeHtml(r.duty_type || '-')+'</td>' +
+      '<td>'+escapeHtml(r.submitted_at || '-')+'</td>' +
+      '<td><button class="btn btn-sm btn-ghost btn-danger" data-action="delete" aria-label="删除 '+escapeHtml(r.date)+'的记录">删除</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function handleRecordsClick(e) {
+  var btn = e.target.closest('button[data-action="delete"]');
+  if (!btn) return;
+  var row = e.target.closest('tr');
+  var record = state.records.find(function(r) { return r.id === parseInt(row.dataset.id); });
+  if (!record) return;
+  state.pendingDelete = record;
+  document.getElementById('deleteBody').innerHTML =
+    '将删除 <strong>'+escapeHtml(record.date)+'（'+escapeHtml(weekdayName(record.date))+'）</strong> ' +
+    '<strong>'+escapeHtml(record.student_name || '未知学生')+'</strong> 的值日记录，删除后不可恢复。';
+  openModal('deleteModal');
+}
+
+function doDelete() {
+  if (!state.pendingDelete) return;
+  api.delete('/admin/records/' + state.pendingDelete.id).then(function(d) {
+    showToast(d.message || '已删除', 'success');
+    closeModal('deleteModal');
+    state.pendingDelete = null;
+    loadRecords();
+    loadLogs();
+  }).catch(function(e) { showToast(e.message || '删除失败', 'error'); });
+}
+
+function openAddModal() {
+  if (!state.classes.length) { showToast('请先添加班级', 'error'); return; }
+  var today = todayStr();
+  var dateInput = document.getElementById('recordDate');
+  dateInput.value = today;
+  dateInput.max = today;
+  document.getElementById('recordDutyType').value = '扫地';
+  var classId = document.getElementById('classSelect').value;
+  if (classId) document.getElementById('recordClass').value = classId;
+  openModal('addRecordModal');
+  loadRecordStudents();
+}
+
+function loadRecordStudents() {
+  var cid = document.getElementById('recordClass').value;
+  var select = document.getElementById('recordStudent');
+  if (!cid) { select.innerHTML = '<option value="">请先选择班级</option>'; return; }
+  api.get('/admin/students', {class_id: cid}).then(function(stus) {
+    var active = (stus || []).filter(function(s) { return s.is_active !== 0; });
+    if (!active.length) { select.innerHTML = '<option value="">该班暂无学生</option>'; return; }
+    select.innerHTML = active.map(function(s) {
+      return '<option value="'+s.id+'">'+escapeHtml(s.name)+' · '+escapeHtml(groupLabel(s.group_name))+'</option>';
+    }).join('');
+  }).catch(function(e) {
+    select.innerHTML = '<option value="">学生加载失败</option>';
+    showToast(e.message || '学生加载失败', 'error');
+  });
+}
+
+function submitRecord() {
+  var studentId = document.getElementById('recordStudent').value;
+  var date = document.getElementById('recordDate').value;
+  var dutyType = document.getElementById('recordDutyType').value;
+  if (!studentId) { showToast('请选择学生', 'error'); return; }
+  if (!date) { showToast('请选择值日日期', 'error'); return; }
+  var btn = document.getElementById('confirmRecordBtn');
+  btn.disabled = true;
+  api.post('/admin/records', {student_id: parseInt(studentId), date: date, duty_type: dutyType}).then(function(d) {
+    showToast(d.message || '补录成功', 'success');
+    closeModal('addRecordModal');
+    loadRecords();
+    loadLogs();
+  }).catch(function(e) { showToast(e.message || '补录失败', 'error'); })
+  .finally(function() { btn.disabled = false; });
+}
+
+function exportExcel() {
+  var classId = document.getElementById('classSelect').value;
+  if (!classId) { showToast('导出前请先选择班级', 'error'); return; }
+  var month = selectedMonth() || new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
+  api.download('/admin/records/export?class_id=' + classId + '&month=' + month, 'duty-records-' + month + '.xlsx')
+    .then(function() { showToast('已导出', 'success'); })
+    .catch(function(e) { showToast(e.message || '导出失败', 'error'); });
+}
+
+function loadLogs() {
+  var params = {};
+  var classId = document.getElementById('classSelect').value;
+  if (classId) params.class_id = classId;
+  return api.get('/admin/change-logs', params).then(function(d) {
+    state.logs = d || [];
+    renderLogs();
+  }).catch(function(e) { showToast(e.message || '操作记录加载失败', 'error'); });
+}
+
+function logStudentName(l) {
+  if (l.student_name) return l.student_name;
+  var names = [];
+  [l.new_student1_name, l.new_student2_name, l.old_student1_name, l.old_student2_name].forEach(function(n) {
+    if (n) names.push(n);
+  });
+  return names.length ? names.join('、') : '-';
+}
+
+function renderLogs() {
+  var tb = document.getElementById('logsBody');
+  if (!state.logs.length) {
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon" aria-hidden="true">🕓</div><p>暂无操作记录</p></div></td></tr>';
+    return;
+  }
+  tb.innerHTML = state.logs.map(function(l) {
+    var action = ACTION_LABELS[l.action_type] || l.action_type || '-';
+    return '<tr>' +
+      '<td>'+escapeHtml(l.created_at || '-')+'</td>' +
+      '<td>'+escapeHtml(action)+'</td>' +
+      '<td>'+escapeHtml(l.class_name || '-')+'</td>' +
+      '<td>'+escapeHtml(logStudentName(l))+'</td>' +
+      '<td>'+escapeHtml(l.reason || '-')+'</td>' +
+    '</tr>';
+  }).join('');
+}
+</script>
+{% endblock %}

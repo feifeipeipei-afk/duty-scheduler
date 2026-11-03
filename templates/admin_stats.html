@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}记录与统计 — 值日记录系统{% endblock %}
+
+{% block content %}
+  <div class="page-header"><h2>记录与统计</h2><a href="/" class="btn btn-outline btn-sm">学生入口</a></div>
+  <div class="card"><div class="card-header">选择班级</div><div class="card-body">
+    <form class="form-row" onsubmit="return false">
+      <div class="form-group"><label for="clsSel">班级</label><select id="clsSel" class="form-control" onchange="onClassChange()"></select></div>
+      <div class="form-group"><label for="yearSel">热力图年份</label><select id="yearSel" class="form-control" style="min-width:130px" onchange="loadHeatmap()"></select></div>
+    </form>
+  </div></div>
+  <div id="area" class="hidden">
+    <div class="stat-cards" id="overview"></div>
+    <div class="card"><div class="card-header">每人值日次数</div><div class="card-body"><div id="chart" role="img" aria-label="每位学生的值日次数条形图"></div></div></div>
+    <div class="card"><div class="card-header">未值日名单</div><div class="card-body"><div id="notDuty"></div></div></div>
+    <div class="card"><div class="card-header">值日记录热力图</div><div class="card-body"><div id="heatmap"></div></div></div>
+  </div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" aria-hidden="true"><div class="modal-box"><div class="modal-header" id="mTitle">详情</div><div id="mStats" class="teacher-note"></div><div class="table-wrap"><table><thead><tr><th>日期</th><th>职责</th><th>提交时间</th></tr></thead><tbody id="mBody"></tbody></table></div><div style="margin-top:16px;text-align:right"><button class="btn btn-outline" onclick="closeModal('modal')">关闭</button></div></div></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/charts.js"></script>
+<script>
+var students = [];
+document.addEventListener('DOMContentLoaded', function() {
+  var now = new Date();
+  var years = [now.getFullYear() - 2, now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1];
+  document.getElementById('yearSel').innerHTML = years.map(function(y) {
+    return '<option value="' + y + '"' + (y === now.getFullYear() ? ' selected' : '') + '>' + y + ' 年</option>';
+  }).join('');
+  api.get('/admin/classes').then(function(d) {
+    var s = document.getElementById('clsSel');
+    s.innerHTML = (d || []).map(function(c) {
+      return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>';
+    }).join('');
+    if (d && d.length) onClassChange();
+  });
+});
+function onClassChange() { loadSummary(); loadDutyCount(); loadHeatmap(); }
+function showArea() { document.getElementById('area').classList.remove('hidden'); }
+function loadSummary() {
+  var cid = document.getElementById('clsSel').value;
+  if (!cid) return;
+  api.get('/admin/stats/summary', { class_id: cid }).then(function(d) {
+    showArea();
+    document.getElementById('overview').innerHTML =
+      '<div class="stat-card"><div class="stat-value">' + (d.record_count || 0) + '</div><div class="stat-label">值日记录</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (d.student_count || 0) + '</div><div class="stat-label">学生数</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (d.not_duty_count || 0) + '</div><div class="stat-label">未值日人数</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (d.group_a_not_duty || 0) + '</div><div class="stat-label">A 组未值日</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (d.group_b_not_duty || 0) + '</div><div class="stat-label">B 组未值日</div></div>';
+  }).catch(function(e) { showToast(e.message || '统计加载失败', 'error'); });
+}
+function loadDutyCount() {
+  var cid = document.getElementById('clsSel').value;
+  if (!cid) return;
+  api.get('/admin/stats/duty-count', { class_id: cid }).then(function(d) {
+    students = d || [];
+    Charts.renderDutyCountChart('chart', students);
+    Charts.renderNotDutyList('notDuty', students, detail);
+  }).catch(function(e) { showToast(e.message || '统计加载失败', 'error'); });
+}
+function loadHeatmap() {
+  var cid = document.getElementById('clsSel').value;
+  if (!cid) return;
+  api.get('/admin/stats/heatmap', { class_id: cid, year: document.getElementById('yearSel').value }).then(function(d) {
+    Charts.renderCalendarHeatmap('heatmap', d);
+  }).catch(function(e) { showToast(e.message || '热力图加载失败', 'error'); });
+}
+function detail(sid) {
+  api.get('/admin/stats/student/' + sid).then(function(d) {
+    document.getElementById('mTitle').textContent = (d.student.name || '') + ' — 值日详情';
+    var st = d.stats || {};
+    document.getElementById('mStats').textContent = '共 ' + (st.total_count || 0) + ' 次 · 扫地 ' + (st.sweep_floor_count || 0) + ' 次 · 擦桌子 ' + (st.wipe_table_count || 0) + ' 次';
+    var tb = document.getElementById('mBody');
+    if (!d.records || !d.records.length) {
+      tb.innerHTML = '<tr><td colspan="3"><div class="empty-state">暂无记录</div></td></tr>';
+    } else {
+      tb.innerHTML = d.records.map(function(r) {
+        return '<tr><td>' + escapeHtml(r.date) + '</td><td>' + escapeHtml(r.duty_type || '-') + '</td><td>' + escapeHtml(r.submitted_at || '-') + '</td></tr>';
+      }).join('');
+    }
+    openModal('modal');
+  }).catch(function(e) { showToast(e.message || '详情加载失败', 'error'); });
+}
+</script>
+{% endblock %}

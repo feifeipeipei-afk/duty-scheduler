@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}老师工作台 — 值日记录系统{% endblock %}
+{% block main_class %} page-enter{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+      <div>
+        <h2>老师工作台</h2>
+        <p class="page-subtitle">建学期、导名单后，学生值日自主提交，这里汇总提醒。</p>
+      </div>
+      <a href="/" class="btn btn-outline btn-sm">学生入口</a>
+    </div>
+
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-value" id="c1">-</div>
+        <div class="stat-label">班级数量</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="c2">-</div>
+        <div class="stat-label">学生总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="c3">-</div>
+        <div class="stat-label">累计值日记录</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="c4">-</div>
+        <div class="stat-label">本月值日记录</div>
+      </div>
+      <a class="stat-card stat-card-link" href="/admin/stats">
+        <div class="stat-value" id="c5">-</div>
+        <div class="stat-label">未值日学生</div>
+      </a>
+    </div>
+
+    <div class="quick-actions">
+      <button class="action-tile" onclick="location.href='/admin/semesters'">
+        <span class="action-icon" aria-hidden="true">⚙️</span>
+        <strong>创建学期</strong>
+        <small>设定起止日期并激活</small>
+      </button>
+      <button class="action-tile" onclick="location.href='/admin/classes?action=import'">
+        <span class="action-icon" aria-hidden="true">⬆️</span>
+        <strong>导入班级名单</strong>
+        <small>姓名 + 值日段（A/B 组）</small>
+      </button>
+      <button class="action-tile" onclick="location.href='/'">
+        <span class="action-icon" aria-hidden="true">📱</span>
+        <strong>学生自主提交</strong>
+        <small>值日完成后学生自行登记</small>
+      </button>
+      <button class="action-tile" onclick="location.href='/admin/stats'">
+        <span class="action-icon" aria-hidden="true">📊</span>
+        <strong>查看未值日名单</strong>
+        <small>跟进还没值日的同学</small>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">今天要关注</div>
+      <div class="card-body" id="todayPanel">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      Promise.all([
+        api.get('/admin/stats/quick').catch(function(){ return {}; }),
+        api.get('/admin/health').catch(function(){ return {summary:{total:0}, issues:[]}; })
+      ]).then(function(res) {
+        var stats = res[0] || {};
+        var health = res[1] || {summary:{total:0}, issues:[]};
+        document.getElementById('c1').textContent = stats.class_count || 0;
+        document.getElementById('c2').textContent = stats.student_count || 0;
+        document.getElementById('c3').textContent = stats.record_count || 0;
+        document.getElementById('c4').textContent = stats.month_record_count || 0;
+        document.getElementById('c5').textContent = stats.not_duty_count || 0;
+        renderToday(health.issues || []);
+      });
+    });
+
+    function renderToday(issues) {
+      var panel = document.getElementById('todayPanel');
+      if (!issues.length) {
+        panel.innerHTML = '<div class="teacher-note success">当前没有发现需要处理的问题，班级名单和值日记录运转正常。</div>';
+        return;
+      }
+      panel.innerHTML = '<div class="issue-list">' + issues.slice(0, 5).map(function(i) {
+        var cls = i.level === 'block' ? 'danger' : 'warn';
+        return '<a class="issue-row '+cls+'" href="'+(i.target || '/admin')+'"><span>'+(i.level === 'block' ? '需处理' : '提醒')+'</span><strong>'+escapeHtml(i.message)+'</strong></a>';
+      }).join('') + '</div>';
+    }
+    </script>
+{% endblock %}

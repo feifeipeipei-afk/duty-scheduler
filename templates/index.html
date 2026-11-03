@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>值日记录系统</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-icon" aria-hidden="true">📋</div>
+    <h1>值日记录系统</h1>
+    <p>值日完成后提交记录，一目了然谁还没值日</p>
+  </div>
+
+  <div class="container">
+    <!-- 卡片 1：提交值日记录（核心） -->
+    <div class="card">
+      <div class="card-header"><span aria-hidden="true">✅</span> 提交值日记录</div>
+      <div class="card-body">
+        <form id="submitForm">
+          <div class="form-group">
+            <label for="classSelect">班级</label>
+            <select id="classSelect" class="form-control" required>
+              <option value="">请选择班级</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="studentName">姓名</label>
+            <input type="text" id="studentName" class="form-control" placeholder="请输入你的姓名" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="dutyDate">值日日期</label>
+              <input type="date" id="dutyDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="dutyType">职责</label>
+              <select id="dutyType" class="form-control">
+                <option value="扫地" selected>扫地</option>
+                <option value="擦桌子">擦桌子</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group hidden" id="submitGroupWrap">
+            <label for="submitGroupSelect">组别（同名时选择）</label>
+            <select id="submitGroupSelect" class="form-control">
+              <option value="">请选择组别</option>
+              <option value="A">A 组（上半学期值日）</option>
+              <option value="B">B 组（下半学期值日）</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg">提交值日记录</button>
+
+          <div class="tip-bar">
+            <span aria-hidden="true">💡</span>
+            <span>名单由老师统一导入；查不到时请核对姓名或联系老师</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 卡片 2：我的值日记录 -->
+    <div class="card">
+      <div class="card-header"><span aria-hidden="true">🔍</span> 我的值日记录</div>
+      <div class="card-body">
+        <form id="recordsForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="recordsClassSelect">班级</label>
+              <select id="recordsClassSelect" class="form-control" required>
+                <option value="">请选择班级</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="recordsName">姓名</label>
+              <input type="text" id="recordsName" class="form-control" placeholder="请输入姓名" required>
+            </div>
+          </div>
+
+          <div class="form-group hidden" id="recordsGroupWrap">
+            <label for="recordsGroupSelect">组别（同名时选择）</label>
+            <select id="recordsGroupSelect" class="form-control">
+              <option value="">请选择组别</option>
+              <option value="A">A 组（上半学期值日）</option>
+              <option value="B">B 组（下半学期值日）</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-blue btn-block">查询记录</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="resultArea" class="hidden">
+      <div class="card">
+        <div class="card-header">
+          <span aria-hidden="true">📋</span> <span id="studentInfo">值日记录</span>
+        </div>
+        <div class="card-body">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>日期</th><th>星期</th><th>职责</th><th>提交时间</th></tr></thead>
+              <tbody id="scheduleBody"></tbody>
+            </table>
+          </div>
+          <div id="emptyState" class="empty-state hidden">
+            <div class="empty-icon" aria-hidden="true">📭</div>
+            <p>暂无值日记录，值日完成后记得来提交哦</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 卡片 3：班级值日榜 -->
+    <div class="card">
+      <div class="card-header"><span aria-hidden="true">📊</span> 班级值日榜</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label for="boardClassSelect">选择班级查看值日榜</label>
+          <select id="boardClassSelect" class="form-control">
+            <option value="">请选择班级</option>
+          </select>
+        </div>
+
+        <div id="boardContent" class="hidden">
+          <div class="summary-stats" id="summaryStats" aria-live="polite"></div>
+          <div class="groups-grid" id="groupsGrid"></div>
+        </div>
+
+        <div id="boardEmpty" class="empty-state hidden">
+          <div class="empty-icon" aria-hidden="true">📭</div>
+          <p>暂无值日榜数据</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingState" class="loading hidden">
+      <div class="spinner"></div>
+      <span>正在查询…</span>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+  <script src="/static/js/student.js"></script>
+</body>
+</html>

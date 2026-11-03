@@ -1,0 +1,18 @@
+# 构建上下文排除项
+.git
+.gitignore
+.env
+.env.example
+*.db
+*.db-journal
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/
+.github/
+node_modules/
+Dockerfile
+docker-compose.yml
+*.md
+*.docx

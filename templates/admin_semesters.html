@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}学期管理 — 值日记录系统{% endblock %}
+
+{% block content %}
+  <div class="page-header"><h2>学期设置</h2><a href="/admin" class="btn btn-outline btn-sm">工作台</a></div>
+  <div class="card"><div class="card-header">添加学期</div><div class="card-body"><div class="form-row">
+    <div class="form-group"><label for="sName">名称</label><input type="text" id="sName" class="form-control" placeholder="2025-2026学年第一学期"></div>
+    <div class="form-group"><label for="sStart">开始</label><input type="date" id="sStart" class="form-control"></div>
+    <div class="form-group"><label for="sEnd">结束</label><input type="date" id="sEnd" class="form-control"></div>
+    <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="add()">添加</button></div>
+  </div></div></div>
+  <div class="card"><div class="card-header">学期列表</div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>名称</th><th>开始</th><th>结束</th><th>状态</th><th>操作</th></tr></thead><tbody id="sList"><tr><td colspan="5"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', load);
+function load() { api.get('/admin/semesters').then(function(d) {
+  var tb=document.getElementById('sList');
+  if(!d||!d.length){tb.innerHTML='<tr><td colspan="5"><div class="empty-state">暂无学期</div></td></tr>';return;}
+  tb.innerHTML=d.map(function(s){var a=s.is_active?'<span class="badge badge-green">当前</span>':'<span class="badge badge-gray">未激活</span>';
+  var b=s.is_active?'':' <button class="btn btn-sm btn-ghost" onclick="act('+s.id+')">激活</button>';
+  return '<tr><td><strong>'+escapeHtml(s.name)+'</strong></td><td>'+s.start_date+'</td><td>'+s.end_date+'</td><td>'+a+'</td><td>'+b+' <button class="btn btn-sm btn-ghost btn-danger" onclick="del('+s.id+')">删除</button></td></tr>';}).join('');
+});}
+function add(){var n=document.getElementById('sName').value.trim(),s=document.getElementById('sStart').value,e=document.getElementById('sEnd').value;if(!n||!s||!e){showToast('请填写完整','error');return;}api.post('/admin/semesters',{name:n,start_date:s,end_date:e}).then(function(){showToast('添加成功','success');document.getElementById('sName').value='';load();}).catch(function(e){showToast(e.message,'error');});}
+function act(id){api.post('/admin/semesters/'+id+'/activate').then(function(){showToast('已激活','success');load();}).catch(function(e){showToast(e.message,'error');});}
+function del(id){if(!confirm('确定删除？'))return;api.delete('/admin/semesters/'+id).then(function(){showToast('已删除','success');load();}).catch(function(e){showToast(e.message,'error');});}
+</script>
+{% endblock %}
