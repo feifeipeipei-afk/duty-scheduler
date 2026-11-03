@@ -1,7 +1,7 @@
 [project]
 name = "duty-scheduler"
 version = "1.1.0"
-description = "值日排班管理系统 — Flask + SQLite + 原生前端"
+description = "值日记录管理系统 — Flask + SQLite + 原生前端"
 requires-python = ">=3.10"
 dependencies = [
     "flask>=3.0,<4",
